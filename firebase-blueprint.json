@@ -1,0 +1,232 @@
+{
+  "entities": {
+    "user": {
+      "title": "User Profile",
+      "description": "Authenticated user profile with role-based access information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "photoURL": { "type": "string", "maxLength": 512 },
+        "role": { "type": "string", "enum": ["client", "admin"] },
+        "phone": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "lead": {
+      "title": "Enquiry Lead",
+      "description": "Inbound client inquiry from AI concierge or direct inquiry forms",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "email": { "type": "string", "maxLength": 256 },
+        "weddingDate": { "type": "string", "maxLength": 64 },
+        "location": { "type": "string", "maxLength": 128 },
+        "guestCount": { "type": "number" },
+        "budget": { "type": "string", "maxLength": 64 },
+        "source": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["new", "contacted", "qualified", "archived"] },
+        "notes": { "type": "string", "maxLength": 2048 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "email", "phone"]
+    },
+    "wedding": {
+      "title": "Wedding Project",
+      "description": "Master wedding celebration dossier managed by clients and planners",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "clientName": { "type": "string", "maxLength": 128 },
+        "partnerName": { "type": "string", "maxLength": 128 },
+        "weddingDate": { "type": "string", "maxLength": 64 },
+        "location": { "type": "string", "maxLength": 128 },
+        "guestCount": { "type": "number" },
+        "budget": { "type": "number" },
+        "aesthetic": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["planning", "active", "completed", "archived"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "clientName", "weddingDate", "location"]
+    },
+    "weddingPlan": {
+      "title": "Curated Wedding Plan",
+      "description": "Multi-step customized celebration blueprint created by client",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "planNumber": { "type": "string", "maxLength": 64 },
+        "celebrationType": { "type": "string", "maxLength": 128 },
+        "targetDate": { "type": "string", "maxLength": 64 },
+        "isDateFlexible": { "type": "boolean" },
+        "location": { "type": "string", "maxLength": 128 },
+        "guestCount": { "type": "number" },
+        "budgetRange": { "type": "string", "maxLength": 128 },
+        "selectedFunctions": { "type": "array" },
+        "selectedServices": { "type": "array" },
+        "status": { "type": "string", "enum": ["draft", "submitted", "reviewed", "contracted"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "celebrationType", "location", "guestCount"]
+    },
+    "budget": {
+      "title": "Budget Breakdown",
+      "description": "Interactive capital allocation and category breakdowns",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "weddingId": { "type": "string", "maxLength": 128 },
+        "targetBudget": { "type": "number" },
+        "allocatedBudget": { "type": "number" },
+        "remainingBudget": { "type": "number" },
+        "location": { "type": "string", "maxLength": 128 },
+        "guestCount": { "type": "number" },
+        "allocations": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "targetBudget"]
+    },
+    "guest": {
+      "title": "Wedding Guest",
+      "description": "Guest entry with invitation, dietary, and RSVP status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "weddingId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "relationship": { "type": "string", "maxLength": 64 },
+        "rsvpStatus": { "type": "string", "enum": ["pending", "attending", "declined"] },
+        "dietary": { "type": "string", "maxLength": 256 },
+        "tableAssignment": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "weddingId", "name", "rsvpStatus"]
+    },
+    "vendor": {
+      "title": "Wedding Vendor",
+      "description": "Engaged vendor or partner supplier record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "weddingId": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 64 },
+        "businessName": { "type": "string", "maxLength": 128 },
+        "contactPerson": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "email": { "type": "string", "maxLength": 256 },
+        "contractedAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["shortlisted", "contacted", "contracted", "paid"] },
+        "notes": { "type": "string", "maxLength": 1024 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "weddingId", "category", "businessName"]
+    },
+    "task": {
+      "title": "Planning Task",
+      "description": "Execution milestone or action item for wedding orchestration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "weddingId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 64 },
+        "dueDate": { "type": "string", "maxLength": 64 },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+        "status": { "type": "string", "enum": ["todo", "in_progress", "completed"] },
+        "notes": { "type": "string", "maxLength": 1024 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "weddingId", "title", "status"]
+    },
+    "message": {
+      "title": "Directorship Message",
+      "description": "Direct communication between client and wedding directorship team",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "senderId": { "type": "string", "maxLength": 128 },
+        "senderName": { "type": "string", "maxLength": 128 },
+        "senderRole": { "type": "string", "enum": ["client", "admin"] },
+        "content": { "type": "string", "maxLength": 4096 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "senderId", "senderRole", "content"]
+    },
+    "rsvp": {
+      "title": "Guest RSVP Response",
+      "description": "Public or invitee RSVP confirmation submission",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "weddingId": { "type": "string", "maxLength": 128 },
+        "guestName": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "attending": { "type": "boolean" },
+        "guestsCount": { "type": "number" },
+        "dietary": { "type": "string", "maxLength": 256 },
+        "submittedAt": { "type": "string" }
+      },
+      "required": ["weddingId", "guestName", "attending"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "Individual client and administrator profiles"
+    },
+    "/leads/{leadId}": {
+      "schema": "lead",
+      "description": "Inbound customer leads and concierge inquiries"
+    },
+    "/weddings/{weddingId}": {
+      "schema": "wedding",
+      "description": "Master wedding records owned by clients or managed by directors"
+    },
+    "/weddingPlans/{planId}": {
+      "schema": "weddingPlan",
+      "description": "Architectural wedding plan proposals generated by users"
+    },
+    "/budgets/{budgetId}": {
+      "schema": "budget",
+      "description": "Saved capital allocations and category calculators"
+    },
+    "/guests/{guestId}": {
+      "schema": "guest",
+      "description": "Guest lists and ceremonial attendance rosters"
+    },
+    "/vendors/{vendorId}": {
+      "schema": "vendor",
+      "description": "Contracted and shortlisted suppliers"
+    },
+    "/tasks/{taskId}": {
+      "schema": "task",
+      "description": "Checklists and timelines for celebration milestones"
+    },
+    "/messages/{messageId}": {
+      "schema": "message",
+      "description": "Atelier directorship communication log"
+    },
+    "/rsvps/{rsvpId}": {
+      "schema": "rsvp",
+      "description": "Guest RSVP submissions"
+    }
+  }
+}

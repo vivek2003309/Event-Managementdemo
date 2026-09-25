@@ -1,0 +1,6 @@
+{
+  "name": "The Wedding Dreams",
+  "description": "The Wedding Dreams — Couture & scenography for luxury destination weddings, heritage palace takeovers, and bespoke bridal celebrations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

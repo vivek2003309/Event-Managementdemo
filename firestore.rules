@@ -1,0 +1,136 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email.lower() == 'itsmevivek2003@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && (
+        request.resource.data.role == 'client' ||
+        (request.resource.data.role == 'admin' && request.auth.token.email.lower() == 'itsmevivek2003@gmail.com')
+      ) || isAdmin();
+      allow update: if (
+        isOwner(userId) &&
+        (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
+          request.resource.data.role == resource.data.role ||
+          (request.resource.data.role == 'admin' && request.auth.token.email.lower() == 'itsmevivek2003@gmail.com')
+        )
+      ) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 2. Leads Collection (inbound customer enquiries)
+    match /leads/{leadId} {
+      allow get, list: if isAdmin();
+      allow create: if request.resource.data.name is string &&
+                       request.resource.data.name.size() > 0 &&
+                       request.resource.data.email is string;
+      allow update, delete: if isAdmin();
+    }
+
+    // 3. Weddings Collection
+    match /weddings/{weddingId} {
+      allow get: if isOwner(resource.data.userId) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isOwner(request.resource.data.userId) || isAdmin();
+      allow update: if isOwner(resource.data.userId) || isAdmin();
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // 4. Wedding Plans Collection
+    match /weddingPlans/{planId} {
+      allow get: if isOwner(resource.data.userId) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isOwner(request.resource.data.userId) || isAdmin();
+      allow update: if isOwner(resource.data.userId) || isAdmin();
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // 5. Budgets Collection
+    match /budgets/{budgetId} {
+      allow get: if isOwner(resource.data.userId) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isOwner(request.resource.data.userId) || isAdmin();
+      allow update: if isOwner(resource.data.userId) || isAdmin();
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // 6. Guests Collection
+    match /guests/{guestId} {
+      allow get: if isOwner(resource.data.userId) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isOwner(request.resource.data.userId) || isAdmin();
+      allow update: if isOwner(resource.data.userId) || isAdmin();
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // 7. Vendors Collection
+    match /vendors/{vendorId} {
+      allow get: if isOwner(resource.data.userId) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isOwner(request.resource.data.userId) || isAdmin();
+      allow update: if isOwner(resource.data.userId) || isAdmin();
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // 8. Tasks Collection
+    match /tasks/{taskId} {
+      allow get: if isOwner(resource.data.userId) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isOwner(request.resource.data.userId) || isAdmin();
+      allow update: if isOwner(resource.data.userId) || isAdmin();
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // 9. Messages Collection
+    match /messages/{messageId} {
+      allow get: if isOwner(resource.data.userId) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    // 10. RSVPs Collection
+    match /rsvps/{rsvpId} {
+      allow get, list: if isAdmin() || (isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.weddingOwnerId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/weddings/$(resource.data.weddingId)) && get(/databases/$(database)/documents/weddings/$(resource.data.weddingId)).data.userId == request.auth.uid)
+      ));
+      allow create: if request.resource.data.guestName is string &&
+                       request.resource.data.guestName.size() > 0 &&
+                       request.resource.data.attending is bool;
+      allow update, delete: if isAdmin();
+    }
+
+  }
+}
