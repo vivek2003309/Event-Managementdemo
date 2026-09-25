@@ -13,6 +13,7 @@ import { FloatingWhatsAppCTA } from './components/layout/FloatingWhatsAppCTA';
 import { AIWeddingConcierge } from './components/concierge/AIWeddingConcierge';
 import { ConsultationModal } from './components/layout/ConsultationModal';
 import { DesignSystemInspector } from './components/layout/DesignSystemInspector';
+import { LuxuryPreloader } from './components/ui/LuxuryPreloader';
 
 // Pages
 import { HomePage } from './pages/HomePage';
@@ -35,6 +36,7 @@ import { AuthProvider } from './context/AuthContext';
 function AppContent() {
   const { path } = useRouter();
   const [isConsultationOpen, setIsConsultationOpen] = useState(false);
+  const [showPreloader, setShowPreloader] = useState(true);
 
   // Router dispatcher
   const renderCurrentPage = () => {
@@ -108,6 +110,9 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-[#F8F5EF] text-[#252525] flex flex-col font-sans selection:bg-[#C6A66B]/25 selection:text-[#171717] overflow-x-hidden">
+      {/* Haute Couture Editorial Preloader */}
+      <LuxuryPreloader onComplete={() => setShowPreloader(false)} />
+
       {/* 1-Row 3-Zone Top Navigation */}
       <Navbar onOpenLetTalk={() => setIsConsultationOpen(true)} />
 

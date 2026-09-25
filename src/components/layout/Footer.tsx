@@ -134,10 +134,19 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-[#F8F5EF]/60 tracking-wider">
-          <div className="text-center md:text-left">
+          <div className="text-center md:text-left flex flex-col sm:flex-row sm:items-center gap-3">
             <span>
-              Copyright &copy; 2025 The Wedding Dreams. All Rights Reserved. Luxury Wedding &amp; Destination Event Management.
+              Copyright &copy; 2025 The Wedding Dreams. All Rights Reserved.
             </span>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.reload();
+              }}
+              className="text-[#C6A66B] hover:text-white transition-colors cursor-pointer text-[10px] uppercase tracking-[0.2em] underline underline-offset-4"
+            >
+              ↺ Replay Preloader Experience
+            </button>
           </div>
           <div className="flex items-center space-x-6">
             <Link href="/privacy" className="hover:text-[#F8F5EF] transition-colors">
