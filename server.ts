@@ -266,6 +266,9 @@ Return ONLY a valid JSON object matching this schema:
 
 // Setup Vite middleware in dev or static files in production
 async function start() {
+  // Always serve static assets from public/ folder with optimal caching
+  app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
+
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, 'dist')));
     app.get('*', (req, res) => {

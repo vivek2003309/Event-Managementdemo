@@ -218,19 +218,20 @@ export const AIWeddingConcierge: React.FC<AIWeddingConciergeProps> = ({ onOpenLe
 
   return (
     <>
-      {/* Floating Trigger Button */}
+      {/* Floating Trigger Button: Decoupled to bottom-right corner */}
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2.5 px-4 py-3 rounded-full bg-[#171717] text-white shadow-[0_8px_30px_rgba(23,23,23,0.35)] hover:bg-[#252525] hover:scale-105 active:scale-95 transition-all border border-[#C6A66B]/50 cursor-pointer group"
+        className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-40 inline-flex items-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full bg-[#171717] text-white shadow-[0_8px_30px_rgba(23,23,23,0.35)] hover:bg-[#202020] hover:scale-105 active:scale-95 transition-all border border-[#C6A66B]/50 cursor-pointer group"
         aria-label="Open AI Wedding Concierge"
       >
-        <span className="relative flex h-2.5 w-2.5">
+        <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C6A66B] opacity-75" />
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#C6A66B]" />
+          <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-[#C6A66B]" />
         </span>
-        <Sparkles className="w-4 h-4 text-[#C6A66B] transition-transform group-hover:rotate-12" />
-        <span className="text-[13px] font-medium tracking-wide">
-          Wedding Concierge
+        <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#C6A66B] transition-transform group-hover:rotate-12" />
+        <span className="text-xs sm:text-[13px] font-medium tracking-wide whitespace-nowrap">
+          <span className="hidden sm:inline">Wedding Concierge</span>
+          <span className="sm:hidden">Concierge</span>
         </span>
       </button>
 

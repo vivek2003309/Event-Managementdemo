@@ -2,7 +2,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'accent' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'accent' | 'outline' | 'ghost' | 'glass';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
@@ -54,6 +54,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       // Ghost: Quiet text with hover state
       ghost:
         'bg-transparent text-[#252525] hover:text-[#C6A66B] hover:bg-[#171717]/[0.04]',
+      
+      // Glass: Semi-transparent luxury glass for dark / hero media overlays
+      glass:
+        'bg-white/10 text-white border border-white/30 backdrop-blur-sm hover:bg-white hover:text-neutral-900 hover:border-white shadow-[0_4px_16px_rgba(0,0,0,0.3)] hover:scale-[1.02] font-medium tracking-wider transition-all duration-300',
     };
 
     return (

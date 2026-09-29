@@ -71,34 +71,37 @@ export function RouterProvider({ children }: { children: React.ReactNode }) {
 }
 
 export interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
-  href: string;
+  href?: string;
+  to?: string;
   children: React.ReactNode;
   activeClassName?: string;
 }
 
 export const Link: React.FC<LinkProps> = ({
   href,
+  to,
   children,
   className = '',
   activeClassName = '',
   onClick,
   ...rest
 }) => {
+  const targetUrl = to || href || '/';
   const { path, navigate } = useRouter();
-  const isCurrent = href === '/' ? path === '/' : path.startsWith(href);
+  const isCurrent = targetUrl === '/' ? path === '/' : path.startsWith(targetUrl);
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (onClick) onClick(e);
-    if (!e.defaultPrevented && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && !href.startsWith('http')) {
+    if (!e.defaultPrevented && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && !targetUrl.startsWith('http')) {
       e.preventDefault();
-      navigate(href);
+      navigate(targetUrl);
     }
   };
 
   const combinedClass = `${className} ${isCurrent ? activeClassName : ''}`.trim();
 
   return (
-    <a href={href} onClick={handleClick} className={combinedClass} aria-current={isCurrent ? 'page' : undefined} {...rest}>
+    <a href={targetUrl} onClick={handleClick} className={combinedClass} aria-current={isCurrent ? 'page' : undefined} {...rest}>
       {children}
     </a>
   );

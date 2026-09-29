@@ -27,11 +27,11 @@ export const WEDDINGS_DATA: Wedding[] = [
     story:
       'Set in the middle of Lake Pichola, Aman and Riya’s wedding commenced with illuminated flotillas of royal vintage barges. The mandap was erected over the island courtyard, adorned with 12,000 hand-threaded marigold ropes and scented white tuberose garlands. The evening concluded with synchronized fireworks reflecting over the water as royal sitarists played until dawn.',
     heroImage:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAhgCm9ZrEDg6KYSpAIRW97aUMXzF_MAI_kz1JBmuTVNtAUhFVQHyXWEo2H-Vyuem5DV0vbzLZnoSXsnObmjJKxZo97Aytz2ELGYGHHx0K80lyZOStW5lO6a5ABPht7YIG4_tQKVJbMtP-EhT15IIA-pITfdvhRtNWELUraLpoc-rSTyON9hth_1w8j-9HbmopU-bqvv_19qjyLILM_BXNRXsiiMwaVxDNTJ0MZe67wTIc-Esgn823I_w',
+      'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1920&q=85',
     galleryImages: [
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAO9K4Dvf27O8nypOBYd8-pCMEu62tj8d-5SGfrTgaBBiiPFHH-XBYnW6ObW6QEN5zgtQp57aUthu01d5ce_sPmdcVintgs1Mx9Y3Gux5cnagGmw-jmJfBgeEbdbNwoYVke_Y5H8ucpVbX1PoCBM2b1TcjMg2c0cXoRIGAsE50jmfDjvRamBJJrPhGZQeg6uJLATJ-3kRBTMfZ8XOreFYQrPadz3iUUXZ6uKzcObr0dQKFersBWJ95rJw',
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAACmvYEOvWXLlGazBNLRDMoF7GdSB5_K4gVvAUHiP5QknA6ZgYgTyqH71HKse-ykqtB0EOnah6ofRBWzR8GPhpjT1QZnrPNteFwK1ne_0DT0vY6QerHKBdPvu51duXsOrHmUZF5tx98nZF9yGJ0M3dkLU6o_L1GkUdvt9p-4j127pKglfZdquyh-HWil-DYIhWupipk8gCQuBEX5Sl7WxKevyF0jBC9zybdle7fWWRICMtuVwNYbIvEA',
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBDpJzn4ENc7lEVMmDTyXr7Lru6l6OScs1prUsFKJ3ZRewGgy3eQawCwwc-SYs8rUNLjLdlfITVtMJzl4x__wyvcnH69L_Pn6hmUMbZOyZ50M_ozxBYcJFO4jRyZ95pVknd8SjJSRhchc0UHMAC2Bh30g-5j7EkhcOVsLStuJDgagZTULk1CiDdTgL6VMe330YoH8ZYSX5EVPTF17trt7w3niccs6l2UOzULOewFG0RmdnNbf8y81sw1Q',
+      'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1080&q=85',
+      'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1080&q=85',
+      'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=1080&q=85',
     ],
     servicesIncluded: [
       'Complete Master Planning',
@@ -75,10 +75,10 @@ export const WEDDINGS_DATA: Wedding[] = [
     story:
       'Perched on the secluded cliffs of South Goa, Kabir and Ananya wished for a ceremony attuned to the tide. We erected a minimal bamboo and flowing linen pergola draped with local wild jasmine and bleached palm fronds. As the golden hour dissolved into starlight, acoustic fado and bossa nova musicians performed around driftwood bonfires.',
     heroImage:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAv5SC-EO1lONTNVfELECWtq4QGFYhX6_-XDL-rFAJVIPcbaQTGe8aXfG5-f4V0eAY28svau5KHFsyUXsO-f1EutPHsnVoMCkEE9C7GWID196Yj9xk8BjILzzu4lh1wCJqYiGaysjEDCNUi5Wt-yxPx8E55YQuc4JeBasQiSckOugLcUHMdctGbWHgEPzPSM0Ovi8OTanmvNNfz5hlEpXVezYv4YZem40r_0VOvzcfD6lcGyIx30mb-iw',
+      'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&w=1920&q=85',
     galleryImages: [
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuB22DLIvYuUsAJGkaxzdbGRw9xG6TCG6Ns_VVeCbJKNjm-6mjv1fqe2eLkHBlFu6KiVoCVV--RT8oCx_B_S86E3d9m_HOf-ItJZJleDoOhQcMMrq1nAJI8kWA7Zp1_rNzJQ8PNUdBndgywUxtwJbfDjO23ttbCXNqFK16uiodsOv46eA0uF56FhrhCwmLGR0u3dhWKYlSxW__CKez2CjmbP_UENxUs0U5TNyV5L2Cxaf8q47jzXFLJoQg',
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAs4_FhaWR2Ti3HuxdOIapkoAyHWr1MdOGuT-apnz6-ysuOw8YwQjtF1IGkpGzuJvGo4zCR7pZk7UbUjPU_07JR23V7tNToScK0ewnuXNOSKroaxeVnD-tBUt1uRIXvvsRTblNl4g7NSw1DnEbO4ZKEsPgS7G7gL3AMlY4DxS1-ANb34md7wtz4JWJjEQ7LATRGgtVkTF3p-Rn8hIeotqaHjRg-jTs9VwfFb7yoPuKANzchHX-DFFeHVA',
+      'https://images.unsplash.com/photo-1545232979-fbf6e4b85c9a?auto=format&fit=crop&w=1080&q=85',
+      'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1080&q=85',
     ],
     servicesIncluded: [
       'Coastal Enclave Production',
@@ -122,10 +122,10 @@ export const WEDDINGS_DATA: Wedding[] = [
     story:
       'An imperial celebration of Rajput heritage and high-energy music. For the Sangeet night, our production team constructed an amphitheatre stage featuring kinetic mirrors and 360-degree acoustic clarity. The royal horse guards flanked the entrance while sixty Dhol percussionists led Vikram’s baraat through Mughal gardens lit by thousands of oil mashals.',
     heroImage:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBhge8KvvXvS3pkva0XciQzvyeNkFN0-apl31gHV6MyvZqnmrnKtVpO2DITVltm58ZtQG9TyKKqqg7exfmNQGk-GrQDRHSO8h87-h7LRaYUE4vomedzyLvy27AHZyVwGzi4qa-0Oah5H44FS1ddXvAdDmLhdb8yPujVjhoCp6Cq4KxsRMIbZy9RDRBPheyTkzeBOIXINpnG--tFEFs-SDCa2DhadBeg8pOX1TkF4yA1JWplsUdXll2g3g',
+      'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1920&q=85',
     galleryImages: [
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBQ7t14UQmgA6wCoNB_OFQB0VUsfNYOS_Hrplr65iW703uaGJyC3Nov4BidtyvyqApkjUxGlFhpI9bhYfta0fBrb7FsExVWNGRMeGKui5aBTn5Fp7bvahw9l4ok3ttJDxwXXLi50wpBsyXUHjMbjhIsi3J62XHP2uF4S4zCHOTjjGVIJtOsF4WkMfKXKoMx98jQL9sbzgq22D-l07TR0DVg8N7xWYuvQ-a324lsu50kRnWs3pjYKPDm-Q',
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAhgCm9ZrEDg6KYSpAIRW97aUMXzF_MAI_kz1JBmuTVNtAUhFVQHyXWEo2H-Vyuem5DV0vbzLZnoSXsnObmjJKxZo97Aytz2ELGYGHHx0K80lyZOStW5lO6a5ABPht7YIG4_tQKVJbMtP-EhT15IIA-pITfdvhRtNWELUraLpoc-rSTyON9hth_1w8j-9HbmopU-bqvv_19qjyLILM_BXNRXsiiMwaVxDNTJ0MZe67wTIc-Esgn823I_w',
+      'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1080&q=85',
+      'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1080&q=85',
     ],
     servicesIncluded: [
       'Heritage Palace Privatization',
@@ -169,10 +169,10 @@ export const WEDDINGS_DATA: Wedding[] = [
     story:
       'Designed for an architect and a fashion editor, this intimate gathering eschewed maximalism in favor of sculptural foliage, raw linen runners, hand-carved soapstone vessels, and negative space. The ceremony was housed inside an orangerie glass pavilion with natural daylight transitioning into twilight candle arrays.',
     heroImage:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAs4_FhaWR2Ti3HuxdOIapkoAyHWr1MdOGuT-apnz6-ysuOw8YwQjtF1IGkpGzuJvGo4zCR7pZk7UbUjPU_07JR23V7tNToScK0ewnuXNOSKroaxeVnD-tBUt1uRIXvvsRTblNl4g7NSw1DnEbO4ZKEsPgS7G7gL3AMlY4DxS1-ANb34md7wtz4JWJjEQ7LATRGgtVkTF3p-Rn8hIeotqaHjRg-jTs9VwfFb7yoPuKANzchHX-DFFeHVA',
+      'https://images.unsplash.com/photo-1545232979-fbf6e4b85c9a?auto=format&fit=crop&w=1920&q=85',
     galleryImages: [
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuA0ukgVsWBuYCS5Lq5mDREMmgob6h0r5iKqf_lei5I_glKwTTdzPCnTsbxvEsOSh_RjqZkmF6_dtURni8-n2C4UKlS67pLShvIrR4cqRME49yVwL1XCDMq4UQdM8Utq7m_NiSWXJClb04T5ggA_aa52FfoHBnLeoyif65FhN-HTWSZNoU1fejUPZJ1731sYepee8Mo4K2ETC9kPev8qyBc1eMIH1cFQRZneTZCbk2Ld-Dzv_9m9H4w9sw',
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuB22DLIvYuUsAJGkaxzdbGRw9xG6TCG6Ns_VVeCbJKNjm-6mjv1fqe2eLkHBlFu6KiVoCVV--RT8oCx_B_S86E3d9m_HOf-ItJZJleDoOhQcMMrq1nAJI8kWA7Zp1_rNzJQ8PNUdBndgywUxtwJbfDjO23ttbCXNqFK16uiodsOv46eA0uF56FhrhCwmLGR0u3dhWKYlSxW__CKez2CjmbP_UENxUs0U5TNyV5L2Cxaf8q47jzXFLJoQg',
+      'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1080&q=85',
+      'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1080&q=85',
     ],
     servicesIncluded: [
       'Minimalist Scenography & Joinery',
@@ -215,10 +215,10 @@ export const WEDDINGS_DATA: Wedding[] = [
     story:
       'For their grand reception, Sameer and Natasha envisioned an opulent fusion of royal Mughal symmetry and Gatsby-esque elegance. We curated a bespoke mirror stage, synchronized warm chandelier dimming for first dances, and custom caviar and Champagne stations.',
     heroImage:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBQ7t14UQmgA6wCoNB_OFQB0VUsfNYOS_Hrplr65iW703uaGJyC3Nov4BidtyvyqApkjUxGlFhpI9bhYfta0fBrb7FsExVWNGRMeGKui5aBTn5Fp7bvahw9l4ok3ttJDxwXXLi50wpBsyXUHjMbjhIsi3J62XHP2uF4S4zCHOTjjGVIJtOsF4WkMfKXKoMx98jQL9sbzgq22D-l07TR0DVg8N7xWYuvQ-a324lsu50kRnWs3pjYKPDm-Q',
+      'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1920&q=85',
     galleryImages: [
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBhge8KvvXvS3pkva0XciQzvyeNkFN0-apl31gHV6MyvZqnmrnKtVpO2DITVltm58ZtQG9TyKKqqg7exfmNQGk-GrQDRHSO8h87-h7LRaYUE4vomedzyLvy27AHZyVwGzi4qa-0Oah5H44FS1ddXvAdDmLhdb8yPujVjhoCp6Cq4KxsRMIbZy9RDRBPheyTkzeBOIXINpnG--tFEFs-SDCa2DhadBeg8pOX1TkF4yA1JWplsUdXll2g3g',
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAACmvYEOvWXLlGazBNLRDMoF7GdSB5_K4gVvAUHiP5QknA6ZgYgTyqH71HKse-ykqtB0EOnah6ofRBWzR8GPhpjT1QZnrPNteFwK1ne_0DT0vY6QerHKBdPvu51duXsOrHmUZF5tx98nZF9yGJ0M3dkLU6o_L1GkUdvt9p-4j127pKglfZdquyh-HWil-DYIhWupipk8gCQuBEX5Sl7WxKevyF0jBC9zybdle7fWWRICMtuVwNYbIvEA',
+      'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1080&q=85',
+      'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=1080&q=85',
     ],
     servicesIncluded: [
       'Grand Reception Architecture',
@@ -262,10 +262,10 @@ export const WEDDINGS_DATA: Wedding[] = [
     story:
       'An intimate ancestral engagement ceremony set upon the lakeside stone jetty. As the evening bells of ancient temples chimed across the water, Dev and Priyanka exchanged rings framed by floating copper urlis and fragrant mogra strings.',
     heroImage:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAACmvYEOvWXLlGazBNLRDMoF7GdSB5_K4gVvAUHiP5QknA6ZgYgTyqH71HKse-ykqtB0EOnah6ofRBWzR8GPhpjT1QZnrPNteFwK1ne_0DT0vY6QerHKBdPvu51duXsOrHmUZF5tx98nZF9yGJ0M3dkLU6o_L1GkUdvt9p-4j127pKglfZdquyh-HWil-DYIhWupipk8gCQuBEX5Sl7WxKevyF0jBC9zybdle7fWWRICMtuVwNYbIvEA',
+      'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1920&q=85',
     galleryImages: [
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAO9K4Dvf27O8nypOBYd8-pCMEu62tj8d-5SGfrTgaBBiiPFHH-XBYnW6ObW6QEN5zgtQp57aUthu01d5ce_sPmdcVintgs1Mx9Y3Gux5cnagGmw-jmJfBgeEbdbNwoYVke_Y5H8ucpVbX1PoCBM2b1TcjMg2c0cXoRIGAsE50jmfDjvRamBJJrPhGZQeg6uJLATJ-3kRBTMfZ8XOreFYQrPadz3iUUXZ6uKzcObr0dQKFersBWJ95rJw',
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBDpJzn4ENc7lEVMmDTyXr7Lru6l6OScs1prUsFKJ3ZRewGgy3eQawCwwc-SYs8rUNLjLdlfITVtMJzl4x__wyvcnH69L_Pn6hmUMbZOyZ50M_ozxBYcJFO4jRyZ95pVknd8SjJSRhchc0UHMAC2Bh30g-5j7EkhcOVsLStuJDgagZTULk1CiDdTgL6VMe330YoH8ZYSX5EVPTF17trt7w3niccs6l2UOzULOewFG0RmdnNbf8y81sw1Q',
+      'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1080&q=85',
+      'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1080&q=85',
     ],
     servicesIncluded: [
       'Lakeside Jetty Scenography',

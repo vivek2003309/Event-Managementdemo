@@ -12,8 +12,7 @@ import { Footer } from './components/layout/Footer';
 import { FloatingWhatsAppCTA } from './components/layout/FloatingWhatsAppCTA';
 import { AIWeddingConcierge } from './components/concierge/AIWeddingConcierge';
 import { ConsultationModal } from './components/layout/ConsultationModal';
-import { DesignSystemInspector } from './components/layout/DesignSystemInspector';
-import { LuxuryPreloader } from './components/ui/LuxuryPreloader';
+import { LuxuryEditorialPreloader } from './components/ui/LuxuryEditorialPreloader';
 
 // Pages
 import { HomePage } from './pages/HomePage';
@@ -37,6 +36,7 @@ function AppContent() {
   const { path } = useRouter();
   const [isConsultationOpen, setIsConsultationOpen] = useState(false);
   const [showPreloader, setShowPreloader] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Router dispatcher
   const renderCurrentPage = () => {
@@ -82,10 +82,18 @@ function AppContent() {
     }
 
     switch (path) {
+      case '/weddings':
+        return (
+          <HomePage
+            onOpenLetTalk={() => setIsConsultationOpen(true)}
+            preloaderComplete={isLoaded}
+          />
+        );
       case '/services':
         return <ServicesPage onOpenLetTalk={() => setIsConsultationOpen(true)} />;
       case '/destinations':
         return <DestinationsPage onOpenLetTalk={() => setIsConsultationOpen(true)} />;
+      case '/work':
       case '/our-work':
         return <OurWorkPage onOpenLetTalk={() => setIsConsultationOpen(true)} />;
       case '/about':
@@ -104,20 +112,30 @@ function AppContent() {
         return <LegalPage type="terms" />;
       case '/':
       default:
-        return <HomePage onOpenLetTalk={() => setIsConsultationOpen(true)} />;
+        return (
+          <HomePage
+            onOpenLetTalk={() => setIsConsultationOpen(true)}
+            preloaderComplete={isLoaded}
+          />
+        );
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F5EF] text-[#252525] flex flex-col font-sans selection:bg-[#C6A66B]/25 selection:text-[#171717] overflow-x-hidden">
+    <div className="min-h-screen bg-[#F8F5EF] text-[#252525] flex flex-col font-sans selection:bg-[#C6A66B]/25 selection:text-[#171717] overflow-x-clip">
       {/* Haute Couture Editorial Preloader */}
-      <LuxuryPreloader onComplete={() => setShowPreloader(false)} />
+      <LuxuryEditorialPreloader
+        onComplete={() => {
+          setShowPreloader(false);
+          setIsLoaded(true);
+        }}
+      />
 
       {/* 1-Row 3-Zone Top Navigation */}
       <Navbar onOpenLetTalk={() => setIsConsultationOpen(true)} />
 
       {/* Main Page Content */}
-      <main className="flex-1 w-full pt-20">{renderCurrentPage()}</main>
+      <main className="flex-1 w-full">{renderCurrentPage()}</main>
 
       {/* Magazine 4-Column Footer */}
       <Footer />
@@ -133,9 +151,6 @@ function AppContent() {
         isOpen={isConsultationOpen}
         onClose={() => setIsConsultationOpen(false)}
       />
-
-      {/* Design System Verification Inspector */}
-      <DesignSystemInspector />
     </div>
   );
 }

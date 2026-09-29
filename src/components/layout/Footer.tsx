@@ -141,7 +141,11 @@ export const Footer: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                window.location.reload();
+                try {
+                  sessionStorage.removeItem('hasSeenPreloader');
+                } catch (e) {}
+                window.dispatchEvent(new CustomEvent('replay-atelier-preloader'));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               className="text-[#C6A66B] hover:text-white transition-colors cursor-pointer text-[10px] uppercase tracking-[0.2em] underline underline-offset-4"
             >
