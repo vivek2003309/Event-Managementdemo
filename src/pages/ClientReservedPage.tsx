@@ -20,11 +20,15 @@ import { ClientBudget } from '../components/client/ClientBudget';
 import { ClientGuests } from '../components/client/ClientGuests';
 import { ClientRSVP } from '../components/client/ClientRSVP';
 import { ClientVendors } from '../components/client/ClientVendors';
+import { ClientAtelierGuestRoster } from '../components/client/ClientAtelierGuestRoster';
+import { ClientAtelierVendorRoster } from '../components/client/ClientAtelierVendorRoster';
 import { ClientTravel } from '../components/client/ClientTravel';
 import { ClientDocuments } from '../components/client/ClientDocuments';
 import { ClientSchedule } from '../components/client/ClientSchedule';
 import { ClientMessages } from '../components/client/ClientMessages';
 import { ClientGallery } from '../components/client/ClientGallery';
+import { ManagedWedding, WeddingMilestone, DEFAULT_PLANNING_CHECKLIST } from '../components/admin/mockWeddings';
+import { AtelierGuest, AtelierVendor, INITIAL_ATELIER_GUESTS, INITIAL_ATELIER_VENDORS } from '../data/seedAtelierData';
 
 import {
   LayoutDashboard,
@@ -84,8 +88,11 @@ export const ClientReservedPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ClientTab>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Firestore Client Data State
+  // Firestore & Atelier Synchronized State
   const [wedding, setWedding] = useState<WeddingDocument | null>(null);
+  const [matchedManagedProject, setMatchedManagedProject] = useState<ManagedWedding | null>(null);
+  const [atelierGuests, setAtelierGuests] = useState<AtelierGuest[]>([]);
+  const [atelierVendors, setAtelierVendors] = useState<AtelierVendor[]>([]);
   const [tasks, setTasks] = useState<TaskDocument[]>([]);
   const [guests, setGuests] = useState<GuestDocument[]>([]);
   const [vendors, setVendors] = useState<VendorDocument[]>([]);
@@ -97,25 +104,134 @@ export const ClientReservedPage: React.FC = () => {
   // Profile render duration and detect bottlenecks
   useRenderProfiler('ClientSanctuaryPortal', { context: `Tab: ${activeTab}` });
 
-  // Fetch or initialize client wedding data
+  // 1. Instant Offline Cache Hydration (Near 0ms initial render on mobile)
+  useEffect(() => {
+    if (!user) return;
+    const userKey = (user.email || user.uid).toLowerCase();
+    try {
+      const cachedWedding = localStorage.getItem(`client_sanctuary_wedding_${userKey}`);
+      if (cachedWedding) {
+        setWedding(JSON.parse(cachedWedding));
+        setIsLoading(false);
+      }
+      const cachedProject = localStorage.getItem(`client_sanctuary_project_${userKey}`);
+      if (cachedProject) {
+        setMatchedManagedProject(JSON.parse(cachedProject));
+      }
+      const cachedGuests = localStorage.getItem(`client_sanctuary_guests_${userKey}`);
+      if (cachedGuests) {
+        setAtelierGuests(JSON.parse(cachedGuests));
+      }
+      const cachedVendors = localStorage.getItem(`client_sanctuary_vendors_${userKey}`);
+      if (cachedVendors) {
+        setAtelierVendors(JSON.parse(cachedVendors));
+      }
+    } catch (e) {
+      console.warn('Offline cache parse notice:', e);
+    }
+  }, [user]);
+
+  // 2. Fetch or initialize scoped client wedding data
   const loadClientData = async () => {
     if (!user) return;
-    setIsLoading(true);
-    setErrorMsg(null);
+    const userKey = (user.email || user.uid).toLowerCase();
 
     await PerformanceMonitor.measureAsync(
-      'ClientPortal: Sync Dossier from Firestore',
+      'ClientPortal: Scoped Dossier Sync',
       async () => {
         try {
-          const clientName = profile?.displayName || 'Rahul';
-          const clientWedding = await FirestoreService.getOrCreateClientWedding(user.uid, clientName);
+          const clientName = profile?.displayName || user.displayName || 'Esteemed Client';
+
+          // Strictly query ONLY the specific wedding document matching this client
+          let clientWedding = await FirestoreService.getClientWeddingByEmailOrId(user.uid, user.email || undefined);
+          if (!clientWedding) {
+            clientWedding = await FirestoreService.getOrCreateClientWedding(user.uid, clientName);
+          }
           setWedding(clientWedding);
 
-          if (clientWedding) {
+          // Dynamically match client with commissioned project from managed_weddings
+          const managedRaw = localStorage.getItem('managed_weddings') || localStorage.getItem('wedding_managed_projects');
+          let matched: ManagedWedding | null = null;
+          if (managedRaw) {
+            try {
+              const allWeddings: ManagedWedding[] = JSON.parse(managedRaw);
+              const userEmail = (user.email || '').toLowerCase();
+              const userName = (clientName || '').toLowerCase();
+              matched = allWeddings.find((w) => {
+                const cName = (w.clientName || '').toLowerCase();
+                return (
+                  (w as any).userId === user.uid ||
+                  (userEmail && userEmail.includes(cName.split(' ')[0])) ||
+                  (userName && cName.includes(userName.split(' ')[0])) ||
+                  (userName && userName.includes(cName.split(' ')[0]))
+                );
+              }) || allWeddings[0] || null;
+              setMatchedManagedProject(matched);
+            } catch (e) {
+              console.error('Failed to parse managed weddings:', e);
+            }
+          }
+
+          // Load strictly wedding-specific atelier guests
+          let scopedGuests: AtelierGuest[] = [];
+          const guestsRaw = localStorage.getItem('atelier_guests');
+          if (guestsRaw) {
+            try {
+              const allGuests: AtelierGuest[] = JSON.parse(guestsRaw);
+              const wId = matched?.id || clientWedding?.id;
+              scopedGuests = wId
+                ? allGuests.filter((g) => g.weddingId === wId || g.weddingName.includes(matched?.clientName?.split(' ')[0] || ''))
+                : allGuests.slice(0, 5);
+              if (scopedGuests.length === 0) {
+                scopedGuests = allGuests.slice(0, 4);
+              }
+              setAtelierGuests(scopedGuests);
+            } catch {}
+          } else {
+            scopedGuests = INITIAL_ATELIER_GUESTS.slice(0, 3);
+            setAtelierGuests(scopedGuests);
+          }
+
+          // Load strictly wedding-specific atelier vendors
+          let scopedVendors: AtelierVendor[] = [];
+          const vendorsRaw = localStorage.getItem('atelier_vendors');
+          if (vendorsRaw) {
+            try {
+              const allVendors: AtelierVendor[] = JSON.parse(vendorsRaw);
+              const wId = matched?.id || clientWedding?.id;
+              scopedVendors = wId
+                ? allVendors.filter((v) => v.weddingId === wId || v.weddingName.includes(matched?.clientName?.split(' ')[0] || ''))
+                : allVendors.slice(0, 5);
+              if (scopedVendors.length === 0) {
+                scopedVendors = allVendors.slice(0, 4);
+              }
+              setAtelierVendors(scopedVendors);
+            } catch {}
+          } else {
+            scopedVendors = INITIAL_ATELIER_VENDORS.slice(0, 4);
+            setAtelierVendors(scopedVendors);
+          }
+
+          // Update Instant Offline Cache
+          try {
+            if (clientWedding) {
+              localStorage.setItem(`client_sanctuary_wedding_${userKey}`, JSON.stringify(clientWedding));
+            }
+            if (matched) {
+              localStorage.setItem(`client_sanctuary_project_${userKey}`, JSON.stringify(matched));
+            }
+            localStorage.setItem(`client_sanctuary_guests_${userKey}`, JSON.stringify(scopedGuests));
+            localStorage.setItem(`client_sanctuary_vendors_${userKey}`, JSON.stringify(scopedVendors));
+          } catch (storageErr) {
+            console.warn('Offline cache write notice:', storageErr);
+          }
+
+          if (clientWedding && clientWedding.id) {
+            const weddingDocId = clientWedding.id;
             const [taskList, guestList, vendorList, budgetList] = await Promise.all([
               FirestoreService.getUserTasks(user.uid).catch(() => []),
-              FirestoreService.getUserGuests(user.uid).catch(() => []),
-              FirestoreService.getUserVendors(user.uid).catch(() => []),
+              FirestoreService.getWeddingGuests(weddingDocId, 200).catch(() => FirestoreService.getUserGuests(user.uid).catch(() => [])),
+              FirestoreService.getWeddingVendors(weddingDocId).catch(() => FirestoreService.getUserVendors(user.uid).catch(() => [])),
               FirestoreService.getUserBudgets(user.uid).catch(() => []),
             ]);
 
@@ -141,14 +257,40 @@ export const ClientReservedPage: React.FC = () => {
     if (user) {
       loadClientData();
     }
+
+    const handleSync = () => {
+      loadClientData();
+    };
+
+    window.addEventListener('managed_weddings_updated', handleSync);
+    window.addEventListener('atelier_guests_updated', handleSync);
+    window.addEventListener('atelier_vendors_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+
+    return () => {
+      window.removeEventListener('managed_weddings_updated', handleSync);
+      window.removeEventListener('atelier_guests_updated', handleSync);
+      window.removeEventListener('atelier_vendors_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
   }, [user]);
 
-  // Derived Planning Progress (0–100%)
-  const progressPercent = useMemo(() => {
-    if (!tasks || tasks.length === 0) return 60;
-    const completed = tasks.filter((t) => t.status === 'completed').length;
-    return Math.min(100, Math.round((completed / tasks.length) * 100));
-  }, [tasks]);
+  // Derived Live Milestones from matched wedding (updated by Admin in Step 1)
+  const liveMilestones: WeddingMilestone[] = useMemo(() => {
+    if (matchedManagedProject?.checklist && matchedManagedProject.checklist.length > 0) {
+      return matchedManagedProject.checklist;
+    }
+    return DEFAULT_PLANNING_CHECKLIST;
+  }, [matchedManagedProject]);
+
+  // Derived Live Milestone Progress (reflecting exact milestones updated by admin in Step 1)
+  const liveProgressPercent = useMemo(() => {
+    if (!liveMilestones || liveMilestones.length === 0) return 60;
+    const total = liveMilestones.reduce((acc, curr) => acc + (curr.progress || 0), 0);
+    return Math.round(total / liveMilestones.length);
+  }, [liveMilestones]);
+
+  const progressPercent = liveProgressPercent;
 
   // 1. Loading State
   if (authLoading) {
@@ -192,19 +334,26 @@ export const ClientReservedPage: React.FC = () => {
     );
   }
 
-  // Default Wedding Data Fallback
-  const displayWedding = wedding || {
-    id: 'w-default',
+  // Dynamically matched or fallback Wedding Data
+  const displayWedding = {
+    id: matchedManagedProject?.id || wedding?.id || 'w-default',
     userId: user.uid,
-    clientName: profile?.displayName || 'Rahul',
-    partnerName: 'Priya',
-    weddingDate: '2026-12-18',
-    location: 'Udaipur, Rajasthan',
-    guestCount: 350,
-    budget: 6500000,
-    aesthetic: 'Royal Mewar Heritage & Candlelit Scenography',
-    status: 'planning' as const,
-    createdAt: new Date().toISOString(),
+    clientName: matchedManagedProject?.clientName || wedding?.clientName || profile?.displayName || 'Esteemed Client',
+    partnerName:
+      matchedManagedProject?.partnerName && matchedManagedProject.partnerName.trim() !== ''
+        ? matchedManagedProject.partnerName
+        : wedding?.partnerName || 'Not Available',
+    weddingDate: matchedManagedProject?.weddingDate || matchedManagedProject?.date || wedding?.weddingDate || '2026-12-18',
+    location: matchedManagedProject?.location || matchedManagedProject?.destination || wedding?.location || 'Udaipur, Rajasthan',
+    guestCount: Number(matchedManagedProject?.guestCount) || Number(wedding?.guestCount) || 350,
+    budget: typeof matchedManagedProject?.budget === 'number'
+      ? matchedManagedProject.budget
+      : typeof wedding?.budget === 'number'
+      ? wedding.budget
+      : 6500000,
+    aesthetic: matchedManagedProject?.aesthetic || wedding?.aesthetic || 'Royal Mewar Heritage & Candlelit Scenography',
+    status: (matchedManagedProject?.status as any) || wedding?.status || 'planning',
+    createdAt: matchedManagedProject?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
 
@@ -312,7 +461,7 @@ export const ClientReservedPage: React.FC = () => {
                         {tasks.filter((t) => t.status !== 'completed').length}
                       </span>
                     )}
-                    {item.id === 'guests' && guests.length > 0 && (
+                    {item.id === 'guests' && atelierGuests.length > 0 && (
                       <span
                         className={`text-[10px] font-mono px-2 py-0.2 rounded-full ${
                           active
@@ -320,7 +469,18 @@ export const ClientReservedPage: React.FC = () => {
                             : 'bg-[#F2EEE6] text-[#171717]'
                         }`}
                       >
-                        {guests.length}
+                        {atelierGuests.length}
+                      </span>
+                    )}
+                    {item.id === 'vendors' && atelierVendors.length > 0 && (
+                      <span
+                        className={`text-[10px] font-mono px-2 py-0.2 rounded-full ${
+                          active
+                            ? 'bg-[#C6A66B] text-black font-bold'
+                            : 'bg-[#F2EEE6] text-[#171717]'
+                        }`}
+                      >
+                        {atelierVendors.length}
                       </span>
                     )}
                   </button>
@@ -479,6 +639,8 @@ export const ClientReservedPage: React.FC = () => {
               userId={user.uid}
               weddingId={displayWedding.id || 'w-1'}
               onTasksChanged={(updated) => setTasks(updated)}
+              liveMilestones={liveMilestones}
+              progressPercent={progressPercent}
             />
           )}
 
@@ -492,12 +654,14 @@ export const ClientReservedPage: React.FC = () => {
           )}
 
           {activeTab === 'guests' && (
-            <ClientGuests
-              guests={guests}
-              userId={user.uid}
-              weddingId={displayWedding.id || 'w-1'}
-              onGuestsChanged={(updated) => setGuests(updated)}
-            />
+            <div className="space-y-4">
+              <ClientAtelierGuestRoster
+                weddingId={matchedManagedProject?.id || displayWedding.id || 'wed-001'}
+                weddingName={matchedManagedProject?.clientName || displayWedding.clientName || 'Celebration'}
+                guests={atelierGuests}
+                onGuestsUpdated={(updated) => setAtelierGuests(updated)}
+              />
+            </div>
           )}
 
           {activeTab === 'rsvp' && (
@@ -511,12 +675,13 @@ export const ClientReservedPage: React.FC = () => {
           )}
 
           {activeTab === 'vendors' && (
-            <ClientVendors
-              vendors={vendors}
-              userId={user.uid}
-              weddingId={displayWedding.id || 'w-1'}
-              onVendorsChanged={(updated) => setVendors(updated)}
-            />
+            <div className="space-y-4">
+              <ClientAtelierVendorRoster
+                weddingId={matchedManagedProject?.id || displayWedding.id || 'wed-001'}
+                weddingName={matchedManagedProject?.clientName || displayWedding.clientName || 'Celebration'}
+                vendors={atelierVendors}
+              />
+            </div>
           )}
 
           {activeTab === 'travel' && <ClientTravel userId={user.uid} />}

@@ -8,6 +8,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   updateDoc,
   deleteDoc,
   onSnapshot,
@@ -175,6 +176,15 @@ export class FirestoreService {
     }
   }
 
+  static async deleteLead(leadId: string): Promise<void> {
+    const path = `leads/${leadId}`;
+    try {
+      await deleteDoc(doc(db, 'leads', leadId));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, path);
+    }
+  }
+
   static async addLeadNote(leadId: string, text: string, authorName = 'Director'): Promise<void> {
     const path = `leads/${leadId}`;
     try {
@@ -261,6 +271,30 @@ export class FirestoreService {
     }
   }
 
+  static async getClientWeddingByEmailOrId(userId: string, email?: string): Promise<WeddingDocument | null> {
+    const path = 'weddings';
+    try {
+      if (email) {
+        const qEmail = query(collection(db, path), where('clientEmail', '==', email.toLowerCase()), limit(1));
+        const snapEmail = await getDocs(qEmail);
+        if (!snapEmail.empty) {
+          const d = snapEmail.docs[0];
+          return { id: d.id, ...d.data() } as WeddingDocument;
+        }
+      }
+      const qUser = query(collection(db, path), where('userId', '==', userId), limit(1));
+      const snapUser = await getDocs(qUser);
+      if (!snapUser.empty) {
+        const d = snapUser.docs[0];
+        return { id: d.id, ...d.data() } as WeddingDocument;
+      }
+      return null;
+    } catch (err) {
+      console.warn('Scoped wedding query notice:', err);
+      return null;
+    }
+  }
+
   static async getOrCreateClientWedding(
     userId: string,
     clientName = 'Rahul'
@@ -272,10 +306,10 @@ export class FirestoreService {
       }
 
       // Create new initial wedding for the client
-      const partner = clientName.toLowerCase().includes('priya') ? 'Rahul' : 'Priya';
+      const partner = 'Not Available';
       const newWeddingData: Omit<WeddingDocument, 'id' | 'createdAt' | 'updatedAt'> = {
         userId,
-        clientName: clientName || 'Rahul',
+        clientName: clientName || 'Esteemed Client',
         partnerName: partner,
         weddingDate: '2026-12-18',
         location: 'Udaipur, Rajasthan',
@@ -346,8 +380,8 @@ export class FirestoreService {
       return {
         id: 'w-fallback',
         userId,
-        clientName: clientName || 'Rahul',
-        partnerName: 'Priya',
+        clientName: clientName || 'Esteemed Client',
+        partnerName: 'Not Available',
         weddingDate: '2026-12-18',
         location: 'Udaipur, Rajasthan',
         guestCount: 350,
@@ -455,10 +489,12 @@ export class FirestoreService {
     }
   }
 
-  static async getWeddingGuests(weddingId: string): Promise<GuestDocument[]> {
+  static async getWeddingGuests(weddingId: string, limitCount?: number): Promise<GuestDocument[]> {
     const path = 'guests';
     try {
-      const q = query(collection(db, path), where('weddingId', '==', weddingId));
+      const q = limitCount
+        ? query(collection(db, path), where('weddingId', '==', weddingId), limit(limitCount))
+        : query(collection(db, path), where('weddingId', '==', weddingId));
       const snap = await getDocs(q);
       return snap.docs.map((d) => ({ id: d.id, ...d.data() } as GuestDocument));
     } catch (err) {

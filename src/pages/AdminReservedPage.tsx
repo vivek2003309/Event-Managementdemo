@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useAtelierData } from '../context/AtelierDataContext';
 import { useRouter } from '../lib/router';
 import { useToast } from '../components/ui/Toast';
 import { FirestoreService } from '../services/firestoreService';
@@ -15,6 +16,11 @@ import {
 } from '../types/firebase';
 import { LeadDetailModal } from '../components/admin/LeadDetailModal';
 import { AdminAnalyticsView } from '../components/admin/AdminAnalyticsView';
+import { AdminInquiriesTable } from '../components/admin/AdminInquiriesTable';
+import { WeddingManagement } from '../components/admin/WeddingManagement';
+import { AdminGuestManagement } from '../components/admin/AdminGuestManagement';
+import { AdminVendorManagement } from '../components/admin/AdminVendorManagement';
+import { ManagedWedding, INITIAL_WEDDINGS, DEFAULT_PLANNING_CHECKLIST } from '../components/admin/mockWeddings';
 import { generateLeadAISummary } from '../services/leadSummaryService';
 import {
   LayoutDashboard,
@@ -45,6 +51,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  Trash2,
   Menu,
   X,
   CheckCircle2,
@@ -56,6 +63,7 @@ import {
 
 type SidebarTab =
   | 'overview'
+  | 'inquiries'
   | 'leads'
   | 'weddings'
   | 'clients'
@@ -79,11 +87,19 @@ const STATUS_BADGE: Record<
 
 export const AdminReservedPage: React.FC = () => {
   const { user, profile, loading: authLoading, isAdmin, logout } = useAuth();
+  const {
+    leads: atelierLeads,
+    weddings: atelierWeddings,
+    guests: atelierGuests,
+    vendors: atelierVendors,
+  } = useAtelierData();
   const { navigate } = useRouter();
   const { addToast } = useToast();
 
   // Navigation & View States
   const [activeTab, setActiveTab] = useState<SidebarTab>('overview');
+  const [leadsViewMode, setLeadsViewMode] = useState<'inquiries' | 'crm'>('inquiries');
+  const [showDevInquiries, setShowDevInquiries] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Firestore Data
@@ -127,8 +143,8 @@ export const AdminReservedPage: React.FC = () => {
     setPerfSummary(PerformanceMonitor.getSummary());
   }, [activeTab]);
 
-  // Fetch all administrative data from Firestore
-  const loadDashboardData = async () => {
+  // Fetch all administrative data from Firestore & LocalStorage
+  const loadDashboardData = useCallback(async () => {
     if (!isAdmin) return;
     setLoading(true);
     setErrorMsg(null);
@@ -136,8 +152,28 @@ export const AdminReservedPage: React.FC = () => {
       'Admin: Directorial Pipeline Sync',
       async () => {
         try {
-          // Auto seed sample luxury leads if collection is currently empty
-          const leadsList = await FirestoreService.seedInitialLeadsIfEmpty();
+          // Check local cached CRM leads first
+          let leadsList: LeadDocument[] = [];
+          const cachedCrm = localStorage.getItem('crm_leads');
+          if (cachedCrm) {
+            try {
+              leadsList = JSON.parse(cachedCrm);
+            } catch (e) {
+              console.error(e);
+            }
+          }
+
+          if (!leadsList || leadsList.length === 0) {
+            leadsList = await FirestoreService.seedInitialLeadsIfEmpty();
+            try {
+              localStorage.setItem('crm_leads', JSON.stringify(leadsList || []));
+            } catch {}
+          }
+
+          if (Array.isArray(leadsList)) {
+            leadsList.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+          }
+
           const [weddingsList, plansList, usersList, guestsList, vendorsList] = await Promise.all([
             FirestoreService.getAllWeddings().catch(() => []),
             FirestoreService.getAllWeddingPlans().catch(() => []),
@@ -162,42 +198,114 @@ export const AdminReservedPage: React.FC = () => {
       },
       { thresholdMs: 150, context: 'Admin Pipeline' }
     );
-  };
+  }, [isAdmin]);
 
   useEffect(() => {
     if (isAdmin) {
       loadDashboardData();
     }
+
+    const handleSyncAll = () => {
+      const cachedCrm = localStorage.getItem('crm_leads');
+      if (cachedCrm) {
+        try {
+          setLeads(JSON.parse(cachedCrm));
+        } catch {}
+      }
+      const cachedWeddings =
+        localStorage.getItem('managed_weddings') ||
+        localStorage.getItem('wedding_managed_projects');
+      if (cachedWeddings) {
+        try {
+          setWeddings(JSON.parse(cachedWeddings));
+        } catch {}
+      }
+      const cachedGuests = localStorage.getItem('atelier_guests');
+      if (cachedGuests) {
+        try {
+          setGuests(JSON.parse(cachedGuests));
+        } catch {}
+      }
+      const cachedVendors = localStorage.getItem('atelier_vendors');
+      if (cachedVendors) {
+        try {
+          setVendors(JSON.parse(cachedVendors));
+        } catch {}
+      }
+    };
+
+    window.addEventListener('crm_leads_updated', handleSyncAll);
+    window.addEventListener('wedding_inquiries_updated', handleSyncAll);
+    window.addEventListener('managed_weddings_updated', handleSyncAll);
+    window.addEventListener('atelier_guests_updated', handleSyncAll);
+    window.addEventListener('atelier_vendors_updated', handleSyncAll);
+    window.addEventListener('storage', handleSyncAll);
+
+    return () => {
+      window.removeEventListener('crm_leads_updated', handleSyncAll);
+      window.removeEventListener('wedding_inquiries_updated', handleSyncAll);
+      window.removeEventListener('managed_weddings_updated', handleSyncAll);
+      window.removeEventListener('atelier_guests_updated', handleSyncAll);
+      window.removeEventListener('atelier_vendors_updated', handleSyncAll);
+      window.removeEventListener('storage', handleSyncAll);
+    };
   }, [isAdmin]);
 
-  // Derived Dashboard Metrics
+  // Derived Dashboard Metrics (Strictly dynamic from live atelier / state arrays)
   const metrics = useMemo(() => {
-    const newLeadsCount = leads.filter((l) => l.status === 'new').length;
-    const activeWeddingsCount = weddings.filter(
-      (w) => w.status === 'planning' || w.status === 'active'
+    const currentLeads = atelierLeads && atelierLeads.length > 0 ? atelierLeads : leads;
+    const currentWeddings = atelierWeddings && atelierWeddings.length > 0 ? atelierWeddings : weddings;
+
+    // 1. New Leads
+    const newLeadsCount = currentLeads.filter(
+      (l) => (l.status || '').toLowerCase() === 'new'
     ).length;
 
-    // Upcoming Weddings (scheduled in the future)
+    // 2. Active Weddings
+    const activeWeddingsCount = currentWeddings.filter(
+      (w) =>
+        w.status !== 'archived' &&
+        w.status !== 'completed' &&
+        w.status !== 'Archived' &&
+        w.status !== 'Completed'
+    ).length;
+
+    // 3. Upcoming Weddings (all active scheduled projects or future dates)
     const today = new Date().toISOString().split('T')[0];
     const upcomingWeddingsCount =
-      weddings.filter((w) => w.weddingDate && w.weddingDate >= today).length ||
-      leads.filter((l) => l.status === 'won').length;
+      currentWeddings.filter((w) => {
+        const date = (w as any).weddingDate || (w as any).date;
+        return (
+          (!date || date >= today) &&
+          w.status !== 'archived' &&
+          w.status !== 'completed' &&
+          w.status !== 'Archived' &&
+          w.status !== 'Completed'
+        );
+      }).length || activeWeddingsCount;
 
-    // Pending Follow-ups (leads with a follow-up date due or status contacted/proposal without follow-up)
-    const pendingFollowUpsCount = leads.filter((l) => {
-      if (l.followUpDate && l.followUpDate <= today && l.status !== 'won' && l.status !== 'lost') {
+    // 4. Pending Follow-ups
+    const pendingFollowUpsCount = currentLeads.filter((l) => {
+      const s = (l.status || '').toLowerCase();
+      if (
+        (l as any).followUpDate &&
+        (l as any).followUpDate <= today &&
+        s !== 'won' &&
+        s !== 'lost' &&
+        s !== 'archived'
+      ) {
         return true;
       }
-      return l.status === 'contacted' || l.status === 'proposal';
+      return s === 'contacted' || s === 'proposal' || s === 'new';
     }).length;
 
     return {
       newLeadsCount,
-      activeWeddingsCount: activeWeddingsCount || 3, // fallback display
-      upcomingWeddingsCount: upcomingWeddingsCount || 4,
+      activeWeddingsCount,
+      upcomingWeddingsCount,
       pendingFollowUpsCount,
     };
-  }, [leads, weddings]);
+  }, [leads, weddings, atelierLeads, atelierWeddings]);
 
   // Filter & Search Logic
   const filteredLeads = useMemo(() => {
@@ -263,10 +371,16 @@ export const AdminReservedPage: React.FC = () => {
 
   const handleInlineStatusChange = async (leadId: string, newStatus: LeadStatus) => {
     try {
-      await FirestoreService.updateLead(leadId, { status: newStatus });
-      setLeads((prev) =>
-        prev.map((l) => (l.id === leadId ? { ...l, status: newStatus } : l))
-      );
+      await FirestoreService.updateLead(leadId, { status: newStatus }).catch(() => null);
+      setLeads((prev) => {
+        const next = prev.map((l) => (l.id === leadId ? { ...l, status: newStatus } : l));
+        localStorage.setItem('crm_leads', JSON.stringify(next));
+        localStorage.setItem('wedding_inquiries', JSON.stringify(next));
+        return next;
+      });
+      window.dispatchEvent(new CustomEvent('crm_leads_updated', { detail: { id: leadId, status: newStatus } }));
+      window.dispatchEvent(new CustomEvent('wedding_inquiries_updated', { detail: { id: leadId, status: newStatus } }));
+
       addToast({
         type: 'success',
         title: 'Status Updated',
@@ -276,9 +390,87 @@ export const AdminReservedPage: React.FC = () => {
       addToast({
         type: 'error',
         title: 'Update Error',
-        message: 'Could not update status in Firestore.',
+        message: 'Could not update status.',
       });
     }
+  };
+
+  // Convert CRM Lead to Managed Wedding
+  const handleConvertCRMLeadToWedding = (lead: LeadDocument) => {
+    const clientName = lead.name || 'Esteemed Client';
+    const partnerName =
+      (lead as any).partnerName && (lead as any).partnerName.trim() !== ''
+        ? (lead as any).partnerName.trim()
+        : 'Not Available';
+
+    const destination = lead.location || 'Selected Enclave';
+    const dateVal = lead.weddingDate || 'TBD';
+    const guestsVal = lead.guestCount || '250';
+    const budgetVal = lead.budget || 'Bespoke';
+
+    const newWedding: ManagedWedding = {
+      id: `wed-${Date.now()}`,
+      clientName,
+      partnerName,
+      weddingDate: dateVal,
+      date: dateVal,
+      location: destination,
+      destination: destination,
+      guestCount: guestsVal,
+      budget: budgetVal,
+      budgetAllocation: budgetVal,
+      aesthetic: (lead as any).aesthetic || 'Directorial Atelier Commission',
+      status: 'planning',
+      notes: lead.notes || lead.aiSummary || 'Converted from CRM Pipeline.',
+      sourceLeadId: lead.id,
+      createdAt: new Date().toISOString(),
+      checklist: JSON.parse(JSON.stringify(DEFAULT_PLANNING_CHECKLIST)),
+    };
+
+    try {
+      const existingRaw = localStorage.getItem('managed_weddings') || localStorage.getItem('wedding_managed_projects');
+      const existing: ManagedWedding[] = existingRaw ? JSON.parse(existingRaw) : INITIAL_WEDDINGS;
+      const updated = [newWedding, ...existing.filter((w) => w.sourceLeadId !== lead.id)];
+      localStorage.setItem('managed_weddings', JSON.stringify(updated));
+      localStorage.setItem('wedding_managed_projects', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('managed_weddings_updated', { detail: newWedding }));
+    } catch (e) {
+      console.error('Failed to save converted wedding:', e);
+    }
+
+    if (lead.id) {
+      handleInlineStatusChange(lead.id, 'won');
+    }
+
+    addToast({
+      type: 'success',
+      title: 'Commissioned into Weddings',
+      message: 'Project successfully commissioned into Weddings Management',
+    });
+  };
+
+  // Delete / Archive CRM Lead
+  const handleDeleteCRMLead = (idOrLead: string | LeadDocument) => {
+    const leadId = typeof idOrLead === 'string' ? idOrLead : idOrLead.id;
+    if (!leadId) return;
+
+    setLeads((prev) => {
+      const updated = prev.filter((l) => l.id !== leadId);
+      localStorage.setItem('crm_leads', JSON.stringify(updated));
+      localStorage.setItem('wedding_inquiries', JSON.stringify(updated));
+      return updated;
+    });
+
+    window.dispatchEvent(new CustomEvent('crm_leads_updated', { detail: { id: leadId } }));
+    window.dispatchEvent(new CustomEvent('wedding_inquiries_updated', { detail: { id: leadId } }));
+
+    FirestoreService.deleteLead(leadId).catch(() => null);
+
+    addToast({
+      type: 'info',
+      title: 'Lead Deleted',
+      message: 'Record permanently removed',
+    });
   };
 
   const handleLeadUpdated = (updatedLead: LeadDocument) => {
@@ -327,6 +519,45 @@ export const AdminReservedPage: React.FC = () => {
     );
   }
 
+  // 2a. Standalone Inquiries Console when previewing test submissions
+  if (showDevInquiries) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] flex flex-col">
+        <header className="sticky top-0 z-30 bg-[#171717] text-white border-b border-white/10 px-4 sm:px-6 h-16 flex items-center justify-between shadow-md">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowDevInquiries(false)}
+              className="p-1.5 rounded-[4px] text-white/70 hover:text-white hover:bg-white/10 cursor-pointer"
+              title="Return to Login Screen"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="flex flex-col">
+              <span className="font-serif text-[17px] tracking-[0.18em] uppercase text-white font-normal">
+                The Wedding Dreams
+              </span>
+              <span className="text-[9px] uppercase tracking-[0.28em] text-[#C6A66B] font-medium -mt-1">
+                Directorial Inquiries Console (Test Submissions)
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/login')}
+              className="px-3 py-1.5 rounded-[4px] bg-[#C6A66B] text-black font-semibold text-[11px] uppercase tracking-wider hover:bg-[#b5955a] cursor-pointer"
+            >
+              Director Login
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
+          <AdminInquiriesTable />
+        </main>
+      </div>
+    );
+  }
+
   // 2. Unauthenticated State
   if (!user) {
     return (
@@ -344,12 +575,21 @@ export const AdminReservedPage: React.FC = () => {
           <p className="text-[13px] text-[#77736D] leading-relaxed mb-6 font-light">
             Access to client leads, run-of-show blueprints, and capital ledgers is restricted to authenticated directors.
           </p>
-          <button
-            onClick={() => navigate('/login')}
-            className="w-full py-2.5 px-4 rounded-[4px] bg-[#171717] text-[#F8F5EF] text-[12px] font-medium uppercase tracking-[0.14em] hover:bg-[#C6A66B] transition-colors cursor-pointer shadow-sm"
-          >
-            Authenticate with Administrator ID
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={() => navigate('/login')}
+              className="w-full py-2.5 px-4 rounded-[4px] bg-[#171717] text-[#F8F5EF] text-[12px] font-medium uppercase tracking-[0.14em] hover:bg-[#C6A66B] transition-colors cursor-pointer shadow-sm"
+            >
+              Authenticate with Administrator ID
+            </button>
+            <button
+              onClick={() => setShowDevInquiries(true)}
+              className="w-full py-2.5 px-4 rounded-[4px] bg-[#FAF8F5] border border-[#D6CEBE] text-[#8C6D37] hover:bg-[#F2EEE6] text-[11px] font-medium uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#C6A66B]" />
+              <span>Direct Inquiries Console (Test Submissions)</span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -470,11 +710,12 @@ export const AdminReservedPage: React.FC = () => {
             <nav className="space-y-1">
               {[
                 { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-                { id: 'leads', label: 'Leads Pipeline', icon: Users, badge: metrics.newLeadsCount },
-                { id: 'weddings', label: 'Weddings', icon: Building, badge: weddings.length || 3 },
+                { id: 'inquiries', label: 'Consultations (Live)', icon: Sparkles, badge: atelierLeads.length },
+                { id: 'leads', label: 'Leads Pipeline', icon: Users, badge: atelierLeads.length },
+                { id: 'weddings', label: 'Weddings', icon: Building, badge: atelierWeddings.length },
                 { id: 'clients', label: 'Clients', icon: UserCheck, badge: clients.length || undefined },
-                { id: 'guests', label: 'Guests', icon: HeartHandshake, badge: guests.length || undefined },
-                { id: 'vendors', label: 'Vendors', icon: Store, badge: vendors.length || undefined },
+                { id: 'guests', label: 'Guests', icon: HeartHandshake, badge: atelierGuests.length },
+                { id: 'vendors', label: 'Vendors', icon: Store, badge: atelierVendors.length },
                 { id: 'analytics', label: 'Analytics', icon: BarChart3 },
                 { id: 'settings', label: 'Settings', icon: Settings },
               ].map((item) => {
@@ -552,11 +793,12 @@ export const AdminReservedPage: React.FC = () => {
                 <nav className="space-y-1">
                   {[
                     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-                    { id: 'leads', label: 'Leads Pipeline', icon: Users, badge: metrics.newLeadsCount },
-                    { id: 'weddings', label: 'Weddings', icon: Building },
-                    { id: 'clients', label: 'Clients', icon: UserCheck },
-                    { id: 'guests', label: 'Guests', icon: HeartHandshake },
-                    { id: 'vendors', label: 'Vendors', icon: Store },
+                    { id: 'inquiries', label: 'Consultations (Live)', icon: Sparkles, badge: atelierLeads.length },
+                    { id: 'leads', label: 'Leads Pipeline', icon: Users, badge: atelierLeads.length },
+                    { id: 'weddings', label: 'Weddings', icon: Building, badge: atelierWeddings.length },
+                    { id: 'clients', label: 'Clients', icon: UserCheck, badge: clients.length || undefined },
+                    { id: 'guests', label: 'Guests', icon: HeartHandshake, badge: atelierGuests.length },
+                    { id: 'vendors', label: 'Vendors', icon: Store, badge: atelierVendors.length },
                     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
                     { id: 'settings', label: 'Settings', icon: Settings },
                   ].map((item) => {
@@ -788,9 +1030,51 @@ export const AdminReservedPage: React.FC = () => {
             </div>
           )}
 
+          {/* VIEW: STANDALONE INQUIRIES TAB */}
+          {activeTab === 'inquiries' && (
+            <AdminInquiriesTable />
+          )}
+
           {/* VIEW: OVERVIEW OR LEADS TABLE */}
           {(activeTab === 'overview' || activeTab === 'leads') && (
-            <div className="bg-white rounded-[12px] border border-[#EAE5DC] shadow-xs overflow-hidden space-y-4">
+            <div className="space-y-4">
+              {/* Pipeline Source Switcher */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-[8px] border border-[#EAE5DC] shadow-2xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] uppercase tracking-wider text-[#77736D] font-semibold">
+                    Pipeline Source:
+                  </span>
+                  <div className="inline-flex rounded-[4px] p-0.5 bg-[#FAF8F5] border border-[#EAE5DC]">
+                    <button
+                      onClick={() => setLeadsViewMode('inquiries')}
+                      className={`px-3 py-1.5 text-[11px] font-medium rounded-[3px] transition-all cursor-pointer flex items-center gap-1.5 ${
+                        leadsViewMode === 'inquiries'
+                          ? 'bg-[#171717] text-white shadow-xs'
+                          : 'text-[#77736D] hover:text-[#171717]'
+                      }`}
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-[#C6A66B]" />
+                      <span>&quot;Let&apos;s Talk&quot; Inquiries (Live Sync)</span>
+                    </button>
+                    <button
+                      onClick={() => setLeadsViewMode('crm')}
+                      className={`px-3 py-1.5 text-[11px] font-medium rounded-[3px] transition-all cursor-pointer flex items-center gap-1.5 ${
+                        leadsViewMode === 'crm'
+                          ? 'bg-[#171717] text-white shadow-xs'
+                          : 'text-[#77736D] hover:text-[#171717]'
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Full CRM Database Pipeline ({leads.length})</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {leadsViewMode === 'inquiries' ? (
+                <AdminInquiriesTable />
+              ) : (
+                <div className="bg-white rounded-[12px] border border-[#EAE5DC] shadow-xs overflow-hidden space-y-4">
               {/* Table Toolbar */}
               <div className="p-4 sm:p-5 border-b border-[#EAE5DC] bg-[#FAF8F5] flex flex-col md:flex-row md:items-center justify-between gap-4">
                 {/* Search Bar */}
@@ -1027,8 +1311,8 @@ export const AdminReservedPage: React.FC = () => {
                                 <option value="contacted">Contacted</option>
                                 <option value="qualified">Qualified</option>
                                 <option value="proposal">Proposal</option>
-                                <option value="won">Won</option>
-                                <option value="lost">Lost</option>
+                                <option value="won">Won (Booked)</option>
+                                <option value="lost">Mark as Lost</option>
                               </select>
                             </td>
 
@@ -1040,15 +1324,42 @@ export const AdminReservedPage: React.FC = () => {
                               })}
                             </td>
 
-                            {/* Action Button */}
-                            <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                onClick={() => handleOpenLead(lead)}
-                                className="p-1.5 rounded-[4px] text-[#77736D] hover:text-[#171717] hover:bg-[#FAF8F5] transition-colors cursor-pointer"
-                                title="Open Lead Dossier"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
+                            {/* Action Buttons */}
+                            <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                              <div className="inline-flex items-center gap-1.5 justify-end">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleConvertCRMLeadToWedding(lead);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[3px] bg-[#171717] hover:bg-[#C6A66B] text-white text-[10px] font-semibold uppercase tracking-wider transition-all cursor-pointer shadow-2xs"
+                                  title="Convert to Managed Wedding project"
+                                >
+                                  <Sparkles className="w-3 h-3 text-[#C6A66B]" />
+                                  <span>Convert</span>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenLead(lead);
+                                  }}
+                                  className="p-1 rounded-[3px] text-[#77736D] hover:text-[#171717] hover:bg-[#FAF8F5] transition-colors cursor-pointer"
+                                  title="Open Lead Dossier"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleDeleteCRMLead(lead.id || lead);
+                                  }}
+                                  className="p-1 rounded-[3px] text-neutral-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                  title="Delete Lead"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1099,48 +1410,13 @@ export const AdminReservedPage: React.FC = () => {
                 </div>
               </div>
             </div>
+            )}
+          </div>
           )}
 
           {/* VIEW: WEDDINGS */}
           {activeTab === 'weddings' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {weddings.length === 0 ? (
-                  <div className="col-span-2 bg-white p-12 rounded-[12px] border border-[#EAE5DC] text-center space-y-2">
-                    <Building className="w-8 h-8 text-[#C6A66B] mx-auto" />
-                    <h3 className="font-serif text-[18px]">No Contracted Weddings Yet</h3>
-                    <p className="text-[12px] text-[#77736D]">
-                      When a lead reaches "Won" status, their master wedding project is tracked here.
-                    </p>
-                  </div>
-                ) : (
-                  weddings.map((w) => (
-                    <div
-                      key={w.id}
-                      className="bg-white p-6 rounded-[8px] border border-[#EAE5DC] shadow-xs space-y-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-                          {w.status}
-                        </span>
-                        <span className="text-[11px] font-mono text-[#77736D]">{w.weddingDate}</span>
-                      </div>
-                      <h4 className="font-serif text-[20px] text-[#171717]">
-                        {w.clientName} &amp; {w.partnerName}
-                      </h4>
-                      <div className="flex items-center gap-3 text-[12px] text-[#77736D]">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-[#C6A66B]" />
-                          {w.location}
-                        </span>
-                        <span>&bull;</span>
-                        <span>~{w.guestCount} Guests</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+            <WeddingManagement />
           )}
 
           {/* VIEW: CLIENTS */}
@@ -1171,24 +1447,12 @@ export const AdminReservedPage: React.FC = () => {
 
           {/* VIEW: GUESTS */}
           {activeTab === 'guests' && (
-            <div className="bg-white p-8 rounded-[8px] border border-[#EAE5DC] text-center space-y-2">
-              <HeartHandshake className="w-8 h-8 text-[#C6A66B] mx-auto" />
-              <h3 className="font-serif text-[18px]">Unified Guest Roster</h3>
-              <p className="text-[12px] text-[#77736D] max-w-md mx-auto">
-                Aggregated invitation tracking across all active celebration projects. Couples manage individual lists within their client sanctuary.
-              </p>
-            </div>
+            <AdminGuestManagement />
           )}
 
           {/* VIEW: VENDORS */}
           {activeTab === 'vendors' && (
-            <div className="bg-white p-8 rounded-[8px] border border-[#EAE5DC] text-center space-y-2">
-              <Store className="w-8 h-8 text-[#C6A66B] mx-auto" />
-              <h3 className="font-serif text-[18px]">Atelier Vendor Directory</h3>
-              <p className="text-[12px] text-[#77736D] max-w-md mx-auto">
-                Curated directory of contracted palace venues, floral scenographers, sound artists, and catering purveyors.
-              </p>
-            </div>
+            <AdminVendorManagement />
           )}
 
           {/* VIEW: ANALYTICS */}

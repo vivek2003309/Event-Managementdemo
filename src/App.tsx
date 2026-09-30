@@ -31,6 +31,7 @@ import { AdminReservedPage } from './pages/AdminReservedPage';
 import { AuthPage } from './pages/AuthPage';
 import { LegalPage } from './pages/LegalPage';
 import { AuthProvider } from './context/AuthContext';
+import { AtelierDataProvider } from './context/AtelierDataContext';
 
 function AppContent() {
   const { path } = useRouter();
@@ -160,9 +161,11 @@ export default function App() {
     <ErrorBoundary>
       <ToastProvider>
         <AuthProvider>
-          <RouterProvider>
-            <AppContent />
-          </RouterProvider>
+          <AtelierDataProvider>
+            <RouterProvider>
+              <AppContent />
+            </RouterProvider>
+          </AtelierDataProvider>
         </AuthProvider>
       </ToastProvider>
     </ErrorBoundary>

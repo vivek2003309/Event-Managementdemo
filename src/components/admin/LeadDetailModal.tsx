@@ -3,6 +3,7 @@ import { LeadDocument, LeadStatus, WeddingPlanDocument } from '../../types/fireb
 import { generateLeadAISummary } from '../../services/leadSummaryService';
 import { FirestoreService } from '../../services/firestoreService';
 import { useToast } from '../ui/Toast';
+import { ManagedWedding, INITIAL_WEDDINGS, DEFAULT_PLANNING_CHECKLIST } from './mockWeddings';
 import {
   X,
   Sparkles,
@@ -149,6 +150,51 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
         message: 'Could not save note.',
       });
     }
+  };
+
+  const handleConvertLeadToWedding = () => {
+    const clientName = currentLead.name || 'Esteemed Client';
+    const partnerName =
+      (currentLead as any).partnerName && (currentLead as any).partnerName.trim() !== ''
+        ? (currentLead as any).partnerName.trim()
+        : 'Not Available';
+
+    const newWedding: ManagedWedding = {
+      id: `wed-${Date.now()}`,
+      clientName,
+      partnerName,
+      weddingDate: currentLead.weddingDate || 'TBD',
+      date: currentLead.weddingDate || 'TBD',
+      location: currentLead.location || 'Selected Palace',
+      destination: currentLead.location || 'Selected Palace',
+      guestCount: currentLead.guestCount || '250',
+      budget: currentLead.budget || 'Bespoke',
+      budgetAllocation: currentLead.budget || 'Bespoke',
+      aesthetic: (currentLead as any).aesthetic || 'Commissioned Atelier Wedding',
+      status: 'planning',
+      notes: currentLead.aiSummary || currentLead.notes || 'Converted directly from Lead Pipeline.',
+      sourceLeadId: currentLead.id,
+      createdAt: new Date().toISOString(),
+      checklist: JSON.parse(JSON.stringify(DEFAULT_PLANNING_CHECKLIST)),
+    };
+
+    try {
+      const stored = localStorage.getItem('managed_weddings') || localStorage.getItem('wedding_managed_projects');
+      const list: ManagedWedding[] = stored ? JSON.parse(stored) : INITIAL_WEDDINGS;
+      const updated = [newWedding, ...list.filter((w: any) => w.sourceLeadId !== currentLead.id)];
+      localStorage.setItem('managed_weddings', JSON.stringify(updated));
+      localStorage.setItem('wedding_managed_projects', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('managed_weddings_updated', { detail: newWedding }));
+    } catch (e) {
+      console.error(e);
+    }
+
+    handleStatusChange('won');
+    addToast({
+      type: 'success',
+      title: 'Converted to Managed Wedding',
+      message: `Project created for ${clientName} & ${partnerName}. View under the Weddings tab.`,
+    });
   };
 
   const statusStyle = STATUS_CONFIG[currentLead.status] || STATUS_CONFIG.new;
@@ -548,12 +594,21 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             )}
           </div>
 
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-[4px] bg-[#171717] text-[#F8F5EF] text-[11px] font-medium uppercase tracking-wider hover:bg-[#C6A66B] transition-colors cursor-pointer"
-          >
-            Close Lead
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleConvertLeadToWedding}
+              className="px-3.5 py-2 rounded-[4px] bg-[#C6A66B] hover:bg-[#b5955a] text-black font-semibold text-[11px] uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Convert to Managed Wedding</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-[4px] bg-[#171717] text-[#F8F5EF] text-[11px] font-medium uppercase tracking-wider hover:bg-[#C6A66B] transition-colors cursor-pointer"
+            >
+              Close Lead
+            </button>
+          </div>
         </div>
       </div>
     </div>

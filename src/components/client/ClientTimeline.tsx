@@ -18,13 +18,18 @@ import {
   AlertCircle,
   Tag,
   Check,
+  Sparkles,
 } from 'lucide-react';
+
+import { ManagedWedding, WeddingMilestone } from '../admin/mockWeddings';
 
 interface ClientTimelineProps {
   tasks: TaskDocument[];
   userId: string;
   weddingId: string;
   onTasksChanged: (updated: TaskDocument[]) => void;
+  liveMilestones?: WeddingMilestone[];
+  progressPercent?: number;
 }
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -40,6 +45,8 @@ export const ClientTimeline: React.FC<ClientTimelineProps> = ({
   userId,
   weddingId,
   onTasksChanged,
+  liveMilestones,
+  progressPercent = 0,
 }) => {
   const { addToast } = useToast();
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -185,6 +192,102 @@ export const ClientTimeline: React.FC<ClientTimelineProps> = ({
           </button>
         </div>
       </div>
+
+      {/* DIRECTORIAL PRODUCTION BLUEPRINT (Step 3: Live Milestone Progress Bar) */}
+      {liveMilestones && liveMilestones.length > 0 && (
+        <div className="bg-white p-6 rounded-[10px] border border-[#EAE5DC] shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EAE5DC] pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#C6A66B]">
+                  Atelier Directorial Production
+                </span>
+                <span className="text-[#8C6D37] text-[10px] bg-[#FAF8F5] px-2 py-0.5 rounded border border-[#EAE5DC]">
+                  Live Admin Sync Active
+                </span>
+              </div>
+              <h3 className="font-serif text-[18px] text-[#171717] mt-0.5">
+                Commission Production Milestones
+              </h3>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <span className="text-[10px] uppercase text-[#77736D] block">Overall Completion</span>
+                <span className="font-serif text-[20px] text-[#171717] font-semibold">{progressPercent}%</span>
+              </div>
+              <div className="w-12 h-12 rounded-full border-2 border-[#C6A66B]/30 flex items-center justify-center bg-[#FAF8F5]">
+                <Sparkles className="w-5 h-5 text-[#C6A66B]" />
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="space-y-1.5">
+            <div className="w-full h-3 rounded-full bg-[#FAF8F5] border border-[#EAE5DC] overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#C6A66B] via-[#DFBA73] to-[#8C6D37] transition-all duration-700 shadow-sm"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-[#77736D]">
+              <span>Inception &amp; Commissioning</span>
+              <span>Ceremony Execution</span>
+            </div>
+          </div>
+
+          {/* Milestones Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+            {liveMilestones.map((m, idx) => {
+              const isDone = m.status === 'Completed' || m.progress === 100;
+              const isInProgress = m.status === 'In Progress' || (m.progress > 0 && m.progress < 100);
+              return (
+                <div
+                  key={m.id || idx}
+                  className={`p-3.5 rounded-[8px] border transition-all ${
+                    isDone
+                      ? 'bg-emerald-50/40 border-emerald-200'
+                      : isInProgress
+                      ? 'bg-amber-50/30 border-amber-200'
+                      : 'bg-[#FAF8F5] border-[#EAE5DC]'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[10px] font-mono text-[#8C6D37] font-semibold">0{idx + 1}</span>
+                    <span
+                      className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-[3px] border ${
+                        isDone
+                          ? 'bg-emerald-100/70 text-emerald-800 border-emerald-300'
+                          : isInProgress
+                          ? 'bg-amber-100/70 text-amber-800 border-amber-300'
+                          : 'bg-[#EAE5DC] text-[#77736D] border-[#D6CEBE]'
+                      }`}
+                    >
+                      {m.status}
+                    </span>
+                  </div>
+                  <h4 className="text-[13px] font-medium text-[#171717] mt-2 mb-2 line-clamp-1">
+                    {m.title}
+                  </h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px] text-[#77736D]">
+                      <span>Progress</span>
+                      <span className="font-semibold text-[#171717]">{m.progress}%</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-black/5 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isDone ? 'bg-emerald-600' : isInProgress ? 'bg-[#C6A66B]' : 'bg-stone-300'
+                        }`}
+                        style={{ width: `${m.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Add Task Drawer / Form */}
       {isAdding && (

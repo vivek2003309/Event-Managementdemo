@@ -336,14 +336,13 @@ export const OurWorkPage: React.FC<{ onOpenLetTalk: () => void }> = ({ onOpenLet
                   Create My Wedding Plan
                 </Button>
 
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="border-white/30 text-white hover:bg-white/10"
+                <button
+                  type="button"
                   onClick={onOpenLetTalk}
+                  className="px-8 py-4 border border-[#C5A059] text-[#C5A059] hover:bg-[#C5A059] hover:text-black transition-all duration-300 uppercase tracking-widest text-xs font-medium rounded-[4px] cursor-pointer inline-flex items-center justify-center select-none shadow-xs"
                 >
                   Talk To Our Team
-                </Button>
+                </button>
               </div>
             </div>
           </div>

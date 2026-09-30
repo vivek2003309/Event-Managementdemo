@@ -179,12 +179,20 @@ export function useRenderProfiler(
 
   useEffect(() => {
     const durationMs = performance.now() - renderStartTime.current;
-    PerformanceMonitor.record({
-      type: 'render',
-      name: `${componentName} Render`,
-      durationMs,
-      thresholdMs: options?.thresholdMs ?? 40,
-      context: options?.context,
+    
+    // Defer metric recording to avoid interrupting paint
+    const handle = requestAnimationFrame(() => {
+      PerformanceMonitor.record({
+        type: 'render',
+        name: `${componentName} Render`,
+        durationMs,
+        thresholdMs: options?.thresholdMs ?? 40,
+        context: options?.context,
+      });
     });
+
+    return () => {
+      cancelAnimationFrame(handle);
+    };
   });
 }

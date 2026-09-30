@@ -79,7 +79,7 @@ export const Hero: React.FC<HeroProps> = ({
         loop
         muted
         playsInline
-        preload="auto"
+        preload="metadata"
         className="absolute inset-0 w-full h-full object-cover object-center z-0 pointer-events-none"
         style={{ minHeight: '100%', minWidth: '100%' }}
       >

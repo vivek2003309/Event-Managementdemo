@@ -4,6 +4,9 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useToast } from '../ui/Toast';
 import { FirestoreService } from '../../services/firestoreService';
+import { useAtelierData } from '../../context/AtelierDataContext';
+import { db } from '../../lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 import { CheckCircle2, Calendar, MapPin, Sparkles } from 'lucide-react';
 
 export interface ConsultationModalProps {
@@ -13,6 +16,7 @@ export interface ConsultationModalProps {
 
 export const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, onClose }) => {
   const { addToast } = useToast();
+  const { addLead } = useAtelierData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -65,6 +69,48 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, on
     if (!validate()) return;
 
     setIsSubmitting(true);
+
+    // 1. Generate unique ID, timestamp, and standard inquiry object
+    const submissionData = {
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      status: 'new' as const,
+      name: formData.fullName,
+      fullName: formData.fullName,
+      partnerName: formData.partnerName,
+      phone: formData.phone,
+      email: formData.email,
+      contact: `${formData.phone} • ${formData.email}`,
+      date: formData.eventDate,
+      eventDate: formData.eventDate,
+      weddingDate: formData.eventDate,
+      destination: formData.destination,
+      guests: formData.guestCount,
+      guestCount: Number(formData.guestCount) || 300,
+      budget: formData.budgetEnvelope,
+      budgetEnvelope: formData.budgetEnvelope,
+      notes: formData.vision,
+      vision: formData.vision,
+      source: "Let's Talk Consultation Modal",
+    };
+
+    // 2. Save/append using unified AtelierDataContext
+    try {
+      addLead(submissionData);
+    } catch (lsErr) {
+      console.error('Error adding lead to context:', lsErr);
+    }
+
+    // 3. If Firebase Firestore is configured, also call addDoc(collection(db, "inquiries"), submissionData)
+    try {
+      if (db) {
+        await addDoc(collection(db, 'inquiries'), submissionData);
+      }
+    } catch (firestoreErr) {
+      console.warn('Firestore addDoc fallback notice:', firestoreErr);
+    }
+
+    // 4. Also record in consultations collection for backward compatibility
     try {
       await FirestoreService.createConsultation({
         fullName: formData.fullName,
@@ -78,25 +124,19 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, on
         vision: formData.vision,
         source: 'Private Directorial Consultation Modal',
       });
-
-      setIsSubmitted(true);
-      addToast({
-        type: 'success',
-        title: 'Consultation Request Registered',
-        message: 'A Senior Directorial Producer will contact you within 12 business hours.',
-      });
-    } catch (err) {
-      console.warn('Consultation submission notice:', err);
-      // Gracefully show confirmation if transient error occurred while data was logged
-      setIsSubmitted(true);
-      addToast({
-        type: 'success',
-        title: 'Consultation Request Received',
-        message: 'Our directorial team has received your celebration brief.',
-      });
-    } finally {
-      setIsSubmitting(false);
+    } catch (consultationErr) {
+      console.warn('Consultation create notice:', consultationErr);
     }
+
+    // 5. Luxury confirmation feedback
+    setIsSubmitted(true);
+    addToast({
+      type: 'success',
+      title: 'Consultation Request Registered',
+      message: 'Your bespoke inquiry has been successfully received and transmitted to our directorial concierge.',
+    });
+
+    setIsSubmitting(false);
   };
 
   const handleReset = () => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { GalleryPhoto } from '../../types/firebase';
 import {
   Image,
@@ -63,10 +63,10 @@ export const ClientGallery: React.FC = () => {
   const [filterCat, setFilterCat] = useState<string>('all');
   const [activePhoto, setActivePhoto] = useState<GalleryPhoto | null>(null);
 
-  const filtered = MOODBOARD_PHOTOS.filter((p) => {
-    if (filterCat === 'all') return true;
-    return p.category === filterCat;
-  });
+  const filtered = useMemo(() => {
+    if (filterCat === 'all') return MOODBOARD_PHOTOS;
+    return MOODBOARD_PHOTOS.filter((p) => p.category === filterCat);
+  }, [filterCat]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -106,12 +106,13 @@ export const ClientGallery: React.FC = () => {
             onClick={() => setActivePhoto(photo)}
             className="group bg-white rounded-[10px] border border-[#EAE5DC] overflow-hidden shadow-xs hover:border-[#C6A66B] transition-all cursor-pointer"
           >
-            <div className="relative aspect-[4/3] overflow-hidden bg-[#171717]">
+            <div className="relative aspect-[4/3] overflow-hidden bg-[#24211D]">
               <img
                 src={photo.imageUrl}
                 alt={photo.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 loading="lazy"
+                decoding="async"
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[12px] font-medium uppercase tracking-wider">
                 <span className="flex items-center gap-1.5 bg-black/60 px-3 py-1.5 rounded-[4px] backdrop-blur-xs">
@@ -151,6 +152,7 @@ export const ClientGallery: React.FC = () => {
                 src={activePhoto.imageUrl}
                 alt={activePhoto.title}
                 className="w-full h-full object-cover"
+                loading="eager"
               />
             </div>
             <div className="p-5 space-y-2 bg-[#FAF8F5]">
