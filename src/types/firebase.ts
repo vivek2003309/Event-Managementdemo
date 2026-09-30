@@ -59,6 +59,25 @@ export interface LeadDocument {
   updatedAt?: string;
 }
 
+export interface ConsultationDocument {
+  id?: string;
+  fullName: string;
+  partnerName?: string;
+  email: string;
+  phone: string;
+  destination: string;
+  eventDate: string;
+  guestCount: string | number;
+  budgetEnvelope: string;
+  vision?: string;
+  source?: string;
+  status?: string;
+  submittedAt?: any;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+
 
 export type WeddingStatus = 'planning' | 'active' | 'completed' | 'archived';
 

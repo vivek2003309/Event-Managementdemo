@@ -65,15 +65,28 @@ export const CinematicHero: React.FC<CinematicHeroProps> = ({
     }
   };
 
+  // Ref to ensure seamless autoplay even on strict mobile browsers
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {
+        // Autoplay policy handled silently
+      });
+    }
+  }, []);
+
   return (
     <section className="relative w-full h-[100dvh] min-h-[100svh] overflow-hidden bg-black">
       {/* Background Ambient Video Entrance: subtle zoom settle (scale 105 -> 100) */}
       <video
+        ref={videoRef}
         autoPlay
         loop
         muted
         playsInline
-        poster="/hero-frames/ezgif-frame-001.jpg"
+        preload="auto"
+        poster="/hero-poster.jpg"
         className={`absolute inset-0 w-full h-full object-cover object-center pointer-events-none transition-transform duration-1000 ease-out ${
           isRevealed ? 'scale-100' : 'scale-105'
         }`}

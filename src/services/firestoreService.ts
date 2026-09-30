@@ -11,6 +11,7 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, auth } from '../lib/firebase';
 import {
@@ -25,10 +26,83 @@ import {
   TaskDocument,
   MessageDocument,
   RSVPDocument,
+  ConsultationDocument,
 } from '../types/firebase';
 
 
 export class FirestoreService {
+  // -------------------------------------------------------------
+  // CONSULTATIONS & INQUIRIES
+  // -------------------------------------------------------------
+  static async createConsultation(consultation: {
+    fullName: string;
+    partnerName?: string;
+    email: string;
+    phone: string;
+    destination: string;
+    eventDate: string;
+    guestCount: string | number;
+    budgetEnvelope: string;
+    vision?: string;
+    source?: string;
+  }): Promise<string> {
+    const path = 'consultations';
+    try {
+      const payload = {
+        fullName: consultation.fullName.trim(),
+        partnerName: consultation.partnerName?.trim() || '',
+        email: consultation.email.trim(),
+        phone: consultation.phone.trim(),
+        destination: consultation.destination,
+        eventDate: consultation.eventDate,
+        guestCount: consultation.guestCount,
+        budgetEnvelope: consultation.budgetEnvelope,
+        vision: consultation.vision?.trim() || '',
+        source: consultation.source || 'Private Directorial Consultation Modal',
+        status: 'new',
+        submittedAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
+      };
+      const docRef = await addDoc(collection(db, path), payload);
+
+      // Concurrently synchronize with the Leads CRM pipeline
+      try {
+        const coupleName = consultation.partnerName?.trim()
+          ? `${consultation.fullName.trim()} & ${consultation.partnerName.trim()}`
+          : consultation.fullName.trim();
+        await this.createLead({
+          name: coupleName,
+          email: consultation.email.trim(),
+          phone: consultation.phone.trim(),
+          weddingDate: consultation.eventDate,
+          location: consultation.destination,
+          guestCount: Number(consultation.guestCount) || 300,
+          budget: consultation.budgetEnvelope,
+          services: ['Private Directorial Consultation', 'Haute Scenography'],
+          source: consultation.source || 'Private Directorial Consultation Modal',
+          status: 'new',
+          notes: consultation.vision?.trim() || `Consultation request scheduled for ${consultation.eventDate}.`,
+        });
+      } catch (leadErr) {
+        console.warn('Leads pipeline sync notice (non-fatal):', leadErr);
+      }
+
+      return docRef.id;
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, path);
+    }
+  }
+
+  static async getConsultations(): Promise<ConsultationDocument[]> {
+    const path = 'consultations';
+    try {
+      const snap = await getDocs(collection(db, path));
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ConsultationDocument));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, path);
+    }
+  }
+
   // -------------------------------------------------------------
   // LEADS
   // -------------------------------------------------------------
