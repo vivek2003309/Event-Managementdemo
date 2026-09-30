@@ -89,8 +89,16 @@ export const OurWorkPage: React.FC<{ onOpenLetTalk: () => void }> = ({ onOpenLet
           HERO BANNER
          ========================================================================= */}
       <section className="relative w-full bg-[#171717] text-white py-24 sm:py-32 overflow-hidden border-b border-[#252525]">
-        {/* Subtle Ambient Radial Lighting */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_center,rgba(198,166,107,0.18)_0%,transparent_60%)] pointer-events-none" />
+        {/* Atmospheric Background Image Layer */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-luminosity scale-105 pointer-events-none"
+          style={{
+            backgroundImage: `url('/service.hero-bg.jpg'), url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=2000&q=85')`,
+          }}
+        />
+        {/* Subtle Ambient Radial Lighting & Gradient Vignette */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#171717]/80 via-[#171717]/70 to-[#171717] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_center,rgba(198,166,107,0.2)_0%,transparent_60%)] pointer-events-none" />
 
         <PageContainer>
           <div className="relative z-10 max-w-3xl mx-auto text-center flex flex-col items-center">

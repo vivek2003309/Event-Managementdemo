@@ -34,47 +34,81 @@ export const ServicesPage: React.FC<{ onOpenLetTalk: () => void }> = ({ onOpenLe
           Headline: "Everything You Need. Beautifully Orchestrated."
          ========================================================================= */}
       <section className="relative w-full bg-[#171717] text-white py-24 sm:py-32 overflow-hidden border-b border-[#252525]">
-        {/* Subtle Background Pattern & Glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(198,166,107,0.15)_0%,transparent_60%)] pointer-events-none" />
+        {/* Atmospheric Background Image Layer */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-luminosity scale-105 pointer-events-none"
+          style={{
+            backgroundImage: `url('/service.hero-bg.jpg'), url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=2000&q=85')`,
+          }}
+        />
+        {/* Gradient Vignette & Glow */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#171717] via-[#171717]/85 to-[#171717]/60 pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(198,166,107,0.2)_0%,transparent_60%)] pointer-events-none" />
 
         <PageContainer>
-          <div className="relative z-10 max-w-3xl">
-            <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-[4px] bg-white/10 backdrop-blur-md mb-6 border border-white/15">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C6A66B]" />
-              <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.25em] text-[#F8F5EF]">
-                Atelier Capabilities &bull; Six Core Disciplines
-              </span>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div className="lg:col-span-7 max-w-2xl">
+              <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-[4px] bg-white/10 backdrop-blur-md mb-6 border border-white/15">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C6A66B]" />
+                <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.25em] text-[#F8F5EF]">
+                  Atelier Capabilities &bull; Six Core Disciplines
+                </span>
+              </div>
+
+              <h1 className="font-serif text-[42px] sm:text-[60px] lg:text-[70px] font-normal leading-[1.08] text-white tracking-tight">
+                Everything You Need.
+                <br />
+                <span className="italic font-light text-[#F8F5EF]">Beautifully Orchestrated.</span>
+              </h1>
+
+              <p className="text-[15px] sm:text-[18px] text-white/80 mt-6 font-light leading-relaxed max-w-xl">
+                From intimate estate vows to multi-day royal palace takeovers, our studio provides
+                comprehensive directorial mastery under single-point command. No fragmented vendors, no
+                compromises.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-4 mt-8">
+                <Button
+                  variant="accent"
+                  size="lg"
+                  onClick={() => navigate('/plan-my-wedding')}
+                  rightIcon={<ArrowRight className="w-4 h-4" />}
+                >
+                  Plan My Wedding
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={onOpenLetTalk}
+                  className="px-8 py-4 border border-[#C5A059] text-[#C5A059] hover:bg-[#C5A059] hover:text-black transition-all duration-300 uppercase tracking-widest text-xs font-medium rounded-[4px] cursor-pointer inline-flex items-center justify-center select-none shadow-xs"
+                >
+                  Schedule Directorial Consultation
+                </button>
+              </div>
             </div>
 
-            <h1 className="font-serif text-[42px] sm:text-[60px] lg:text-[70px] font-normal leading-[1.08] text-white tracking-tight">
-              Everything You Need.
-              <br />
-              <span className="italic font-light text-[#F8F5EF]">Beautifully Orchestrated.</span>
-            </h1>
-
-            <p className="text-[15px] sm:text-[18px] text-white/80 mt-6 font-light leading-relaxed max-w-2xl">
-              From intimate estate vows to multi-day royal palace takeovers, our studio provides
-              comprehensive directorial mastery under single-point command. No fragmented vendors, no
-              compromises.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-4 mt-8">
-              <Button
-                variant="accent"
-                size="lg"
-                onClick={() => navigate('/plan-my-wedding')}
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-              >
-                Plan My Wedding
-              </Button>
-
-              <button
-                type="button"
-                onClick={onOpenLetTalk}
-                className="px-8 py-4 border border-[#C5A059] text-[#C5A059] hover:bg-[#C5A059] hover:text-black transition-all duration-300 uppercase tracking-widest text-xs font-medium rounded-[4px] cursor-pointer inline-flex items-center justify-center select-none shadow-xs"
-              >
-                Schedule Directorial Consultation
-              </button>
+            {/* Featured Visual Frame */}
+            <div className="lg:col-span-5 relative hidden lg:block">
+              <div className="relative rounded-[12px] overflow-hidden border border-white/20 shadow-2xl group">
+                <img
+                  src="/service.hero-bg.jpg"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src =
+                      'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=85';
+                  }}
+                  alt="Floral Botanical Drapes Wedding Scenography"
+                  className="w-full aspect-[4/5] object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute bottom-4 left-4 right-4 p-4 bg-black/60 backdrop-blur-md rounded-[6px] border border-[#C6A66B]/30">
+                  <span className="text-[10px] uppercase font-semibold tracking-[0.2em] text-[#C6A66B] block">
+                    Bespoke Scenography &bull; Directorial Setup
+                  </span>
+                  <p className="font-serif text-[15px] italic text-[#F8F5EF] mt-0.5">
+                    &ldquo;Together is our favorite place to be&rdquo;
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </PageContainer>
