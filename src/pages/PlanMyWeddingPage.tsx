@@ -212,6 +212,7 @@ export const PlanMyWeddingPage: React.FC<{ onOpenLetTalk?: () => void }> = ({ on
   const [draft, setDraft] = useState<PlanDraft>(() => WeddingPlanService.getDraft());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [consentChecked, setConsentChecked] = useState<boolean>(false);
   const [submittedPlan, setSubmittedPlan] = useState<PreliminaryPlan | null>(null);
 
   // Sync draft updates to localStorage automatically
@@ -620,7 +621,7 @@ export const PlanMyWeddingPage: React.FC<{ onOpenLetTalk?: () => void }> = ({ on
                         if (onOpenLetTalk) {
                           onOpenLetTalk();
                         } else {
-                          window.location.href = `https://wa.me/919820048210?text=Namaste%2C%20I%20have%20generated%20my%20Wedding%20Plan%20(${submittedPlan.id})%20for%20${encodeURIComponent(submittedPlan.location)}%20and%20would%20love%20to%20schedule%20a%20private%20consultation.`;
+                          window.location.href = `https://wa.me/919871211995?text=Hello%20The%20Wedding%20Dreams,%20I%20have%20generated%20my%20Wedding%20Plan%20(${submittedPlan.id})%20for%20${encodeURIComponent(submittedPlan.location)}%20and%20would%20love%20to%20schedule%20a%20private%20consultation.`;
                         }
                       }}
                       rightIcon={<ArrowRight className="w-4 h-4" />}
@@ -629,7 +630,7 @@ export const PlanMyWeddingPage: React.FC<{ onOpenLetTalk?: () => void }> = ({ on
                     </Button>
 
                     <a
-                      href={`https://wa.me/919820048210?text=Namaste%2C%20I%20have%20created%20Wedding%20Plan%20${submittedPlan.id}%20on%20The%20Wedding%20Dreams.%20Please%20connect%20me%20with%20a%20director.`}
+                      href={`https://wa.me/919871211995?text=Hello%20The%20Wedding%20Dreams,%20I%20have%20created%20Wedding%20Plan%20${submittedPlan.id}%20on%20The%20Wedding%20Dreams.%20Please%20connect%20me%20with%20a%20director.`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-[4px] bg-[#25D366] text-white text-[13px] font-medium hover:bg-[#20ba5a] transition-colors cursor-pointer"
@@ -1277,6 +1278,29 @@ export const PlanMyWeddingPage: React.FC<{ onOpenLetTalk?: () => void }> = ({ on
                   </div>
                 </div>
 
+                {/* DPDP Compliance Checkbox */}
+                <div className="p-3.5 bg-[#FAF8F5] border border-[#EAE5DC] rounded-[4px] flex items-start gap-3 text-[12px] text-[#55524E]">
+                  <input
+                    type="checkbox"
+                    id="dpdp-consent-plan"
+                    checked={consentChecked}
+                    onChange={(e) => setConsentChecked(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-[#EAE5DC] text-[#C6A66B] focus:ring-[#C6A66B] cursor-pointer shrink-0"
+                  />
+                  <label htmlFor="dpdp-consent-plan" className="leading-snug cursor-pointer select-none">
+                    I consent to The Wedding Dreams processing my submitted contact coordinates for event curation and directorial consultations in accordance with the{' '}
+                    <a
+                      href="/privacy-policy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#C6A66B] underline font-medium hover:text-[#171717] transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Privacy Policy
+                    </a>.
+                  </label>
+                </div>
+
                 <div className="p-3.5 rounded-[6px] bg-[#FAF8F5] border border-[#EAE5DC] flex items-center gap-3">
                   <ShieldCheck className="w-4 h-4 text-[#8C6D37] shrink-0" />
                   <span className="text-[11px] text-[#66625D]">
@@ -1327,6 +1351,7 @@ export const PlanMyWeddingPage: React.FC<{ onOpenLetTalk?: () => void }> = ({ on
                     size="md"
                     onClick={handleSubmit}
                     isLoading={isSubmitting}
+                    disabled={!consentChecked || isSubmitting}
                     rightIcon={<Sparkles className="w-4 h-4" />}
                     className="cursor-pointer shadow-md"
                   >

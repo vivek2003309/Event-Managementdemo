@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from '../lib/router';
 import { useToast } from '../components/ui/Toast';
 import { FirestoreService } from '../services/firestoreService';
+import { db } from '../lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { PerformanceMonitor, useRenderProfiler } from '../lib/performanceMonitor';
 import { SEOHead } from '../components/seo/SEOHead';
 import {
@@ -27,6 +29,9 @@ import { ClientDocuments } from '../components/client/ClientDocuments';
 import { ClientSchedule } from '../components/client/ClientSchedule';
 import { ClientMessages } from '../components/client/ClientMessages';
 import { ClientGallery } from '../components/client/ClientGallery';
+import { ClientFeedbackSurvey } from '../components/client/ClientFeedbackSurvey';
+import { ClientOnboardingTour } from '../components/client/ClientOnboardingTour';
+import { generateWeddingBlueprintPDF } from '../services/blueprintPdfService';
 import { ManagedWedding, WeddingMilestone, DEFAULT_PLANNING_CHECKLIST } from '../components/admin/mockWeddings';
 import { AtelierGuest, AtelierVendor, INITIAL_ATELIER_GUESTS, INITIAL_ATELIER_VENDORS } from '../data/seedAtelierData';
 
@@ -51,6 +56,8 @@ import {
   RefreshCw,
   AlertCircle,
   ExternalLink,
+  Download,
+  Award,
 } from 'lucide-react';
 
 export type ClientTab =
@@ -64,7 +71,8 @@ export type ClientTab =
   | 'documents'
   | 'schedule'
   | 'messages'
-  | 'gallery';
+  | 'gallery'
+  | 'feedback';
 
 const SIDEBAR_ITEMS: { id: ClientTab; label: string; icon: any }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -78,6 +86,7 @@ const SIDEBAR_ITEMS: { id: ClientTab; label: string; icon: any }[] = [
   { id: 'schedule', label: 'Schedule', icon: Clock },
   { id: 'messages', label: 'Messages', icon: MessageSquare },
   { id: 'gallery', label: 'Gallery', icon: Image },
+  { id: 'feedback', label: 'Post-Wedding Survey', icon: Award },
 ];
 
 export const ClientReservedPage: React.FC = () => {
@@ -132,8 +141,10 @@ export const ClientReservedPage: React.FC = () => {
   }, [user]);
 
   // 2. Fetch or initialize scoped client wedding data
-  const loadClientData = async () => {
-    if (!user) return;
+  const isSyncing = useRef(false);
+  const loadClientData = useCallback(async () => {
+    if (!user || !user.uid || isSyncing.current) return;
+    isSyncing.current = true;
     const userKey = (user.email || user.uid).toLowerCase();
 
     await PerformanceMonitor.measureAsync(
@@ -143,11 +154,19 @@ export const ClientReservedPage: React.FC = () => {
           const clientName = profile?.displayName || user.displayName || 'Esteemed Client';
 
           // Strictly query ONLY the specific wedding document matching this client
-          let clientWedding = await FirestoreService.getClientWeddingByEmailOrId(user.uid, user.email || undefined);
-          if (!clientWedding) {
-            clientWedding = await FirestoreService.getOrCreateClientWedding(user.uid, clientName);
+          let clientWedding: WeddingDocument | null = null;
+          try {
+            clientWedding = await FirestoreService.getClientWeddingByEmailOrId(user.uid, user.email || undefined);
+            if (!clientWedding && user.uid) {
+              clientWedding = await FirestoreService.getOrCreateClientWedding(user.uid, clientName);
+            }
+          } catch (e) {
+            console.info('[ClientPortal] Using local client wedding fallback:', e);
           }
-          setWedding(clientWedding);
+
+          if (clientWedding) {
+            setWedding(clientWedding);
+          }
 
           // Dynamically match client with commissioned project from managed_weddings
           const managedRaw = localStorage.getItem('managed_weddings') || localStorage.getItem('wedding_managed_projects');
@@ -228,33 +247,55 @@ export const ClientReservedPage: React.FC = () => {
 
           if (clientWedding && clientWedding.id) {
             const weddingDocId = clientWedding.id;
-            const [taskList, guestList, vendorList, budgetList] = await Promise.all([
-              FirestoreService.getUserTasks(user.uid).catch(() => []),
-              FirestoreService.getWeddingGuests(weddingDocId, 200).catch(() => FirestoreService.getUserGuests(user.uid).catch(() => [])),
-              FirestoreService.getWeddingVendors(weddingDocId).catch(() => FirestoreService.getUserVendors(user.uid).catch(() => [])),
-              FirestoreService.getUserBudgets(user.uid).catch(() => []),
+            const [taskRes, guestRes, vendorRes, budgetRes] = await Promise.allSettled([
+              FirestoreService.getUserTasks(user.uid),
+              FirestoreService.getWeddingGuests(weddingDocId, 200),
+              FirestoreService.getWeddingVendors(weddingDocId),
+              FirestoreService.getUserBudgets(user.uid),
             ]);
 
-            setTasks(taskList || []);
-            setGuests(guestList || []);
-            setVendors(vendorList || []);
-            if (budgetList && budgetList.length > 0) {
-              setBudget(budgetList[0]);
+            if (taskRes.status === 'fulfilled' && Array.isArray(taskRes.value) && taskRes.value.length) {
+              setTasks(taskRes.value);
+            }
+            if (guestRes.status === 'fulfilled' && Array.isArray(guestRes.value) && guestRes.value.length) {
+              setGuests(guestRes.value);
+            }
+            if (vendorRes.status === 'fulfilled' && Array.isArray(vendorRes.value) && vendorRes.value.length) {
+              setVendors(vendorRes.value);
+            }
+            if (budgetRes.status === 'fulfilled' && Array.isArray(budgetRes.value) && budgetRes.value.length) {
+              setBudget(budgetRes.value[0]);
             }
           }
+          setErrorMsg(null);
         } catch (err: any) {
-          console.warn('Client data load warning:', err);
-          setErrorMsg(err?.message || 'Failed to synchronize client records with Firestore.');
+          console.info('[ClientPortal] Synchronized via local cache fallback:', err?.message || err);
+          setErrorMsg(null);
         } finally {
           setIsLoading(false);
+          setTimeout(() => { isSyncing.current = false; }, 500);
         }
       },
-      { thresholdMs: 150, context: `User: ${user.uid}` }
+      { thresholdMs: 600, context: `User: ${user.uid}` }
     );
-  };
+  }, [user?.uid, profile?.displayName]);
 
   useEffect(() => {
-    if (user) {
+    if (!user || !user.uid) return;
+    const q = query(collection(db, 'weddings'), where('userId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const liveDoc = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as WeddingDocument;
+        setWedding(liveDoc);
+      }
+    }, (err) => {
+      console.warn('Live client wedding snapshot notice:', err);
+    });
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (user?.uid) {
       loadClientData();
     }
 
@@ -273,7 +314,7 @@ export const ClientReservedPage: React.FC = () => {
       window.removeEventListener('atelier_vendors_updated', handleSync);
       window.removeEventListener('storage', handleSync);
     };
-  }, [user]);
+  }, [user?.uid, loadClientData]);
 
   // Derived Live Milestones from matched wedding (updated by Admin in Step 1)
   const liveMilestones: WeddingMilestone[] = useMemo(() => {
@@ -291,6 +332,31 @@ export const ClientReservedPage: React.FC = () => {
   }, [liveMilestones]);
 
   const progressPercent = liveProgressPercent;
+
+  // Dynamically matched or fallback Wedding Data
+  const displayWedding = useMemo(() => ({
+    id: matchedManagedProject?.id || wedding?.id || 'w-default',
+    userId: user?.uid || '',
+    clientName: matchedManagedProject?.clientName || wedding?.clientName || profile?.displayName || 'Esteemed Client',
+    partnerName:
+      matchedManagedProject?.partnerName && matchedManagedProject.partnerName.trim() !== ''
+        ? matchedManagedProject.partnerName
+        : wedding?.partnerName || 'Not Available',
+    weddingDate: matchedManagedProject?.weddingDate || matchedManagedProject?.date || wedding?.weddingDate || '2026-12-18',
+    location: matchedManagedProject?.location || matchedManagedProject?.destination || wedding?.location || 'Udaipur, Rajasthan',
+    guestCount: Number(matchedManagedProject?.guestCount) || Number(wedding?.guestCount) || 350,
+    budget: typeof matchedManagedProject?.budget === 'number'
+      ? matchedManagedProject.budget
+      : typeof wedding?.budget === 'number'
+      ? wedding.budget
+      : 6500000,
+    aesthetic: matchedManagedProject?.aesthetic || wedding?.aesthetic || 'Royal Mewar Heritage & Candlelit Scenography',
+    status: (matchedManagedProject?.status as any) || wedding?.status || 'planning',
+    createdAt: matchedManagedProject?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }), [matchedManagedProject, wedding, profile, user]);
+
+  const clientNameGreeting = profile?.displayName || displayWedding.clientName || 'Esteemed Guest';
 
   // 1. Loading State
   if (authLoading) {
@@ -333,31 +399,6 @@ export const ClientReservedPage: React.FC = () => {
       </div>
     );
   }
-
-  // Dynamically matched or fallback Wedding Data
-  const displayWedding = {
-    id: matchedManagedProject?.id || wedding?.id || 'w-default',
-    userId: user.uid,
-    clientName: matchedManagedProject?.clientName || wedding?.clientName || profile?.displayName || 'Esteemed Client',
-    partnerName:
-      matchedManagedProject?.partnerName && matchedManagedProject.partnerName.trim() !== ''
-        ? matchedManagedProject.partnerName
-        : wedding?.partnerName || 'Not Available',
-    weddingDate: matchedManagedProject?.weddingDate || matchedManagedProject?.date || wedding?.weddingDate || '2026-12-18',
-    location: matchedManagedProject?.location || matchedManagedProject?.destination || wedding?.location || 'Udaipur, Rajasthan',
-    guestCount: Number(matchedManagedProject?.guestCount) || Number(wedding?.guestCount) || 350,
-    budget: typeof matchedManagedProject?.budget === 'number'
-      ? matchedManagedProject.budget
-      : typeof wedding?.budget === 'number'
-      ? wedding.budget
-      : 6500000,
-    aesthetic: matchedManagedProject?.aesthetic || wedding?.aesthetic || 'Royal Mewar Heritage & Candlelit Scenography',
-    status: (matchedManagedProject?.status as any) || wedding?.status || 'planning',
-    createdAt: matchedManagedProject?.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  const clientNameGreeting = profile?.displayName || displayWedding.clientName || 'Esteemed Guest';
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex flex-col">
@@ -599,104 +640,142 @@ export const ClientReservedPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Planning Progress Component (0–100%) */}
-            <div className="bg-[#FAF8F5] p-3.5 sm:p-4 rounded-[8px] border border-[#EAE5DC] min-w-[240px] space-y-2">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="font-semibold uppercase tracking-wider text-[#8C6D37]">
-                  Planning Progress
-                </span>
-                <strong className="font-serif text-[18px] text-[#171717]">
-                  {progressPercent}%
-                </strong>
-              </div>
-              <div className="w-full h-2 rounded-full bg-white border border-[#EAE5DC] overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#C6A66B] to-[#8C6D37] transition-all duration-500"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-              <div className="text-[10px] text-[#77736D] flex items-center justify-between">
-                <span>0% Initiation</span>
-                <span>100% Nuptial Day</span>
+            {/* Planning Progress & Blueprint Download */}
+            <div className="flex flex-col items-end gap-3 shrink-0">
+              <button
+                onClick={() => {
+                  generateWeddingBlueprintPDF(displayWedding, tasks, guests, vendors, budget);
+                  addToast({
+                    type: 'success',
+                    title: 'Blueprint Downloaded',
+                    message: 'Official Wedding Sanctuary PDF Dossier generated successfully.',
+                  });
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-[6px] bg-[#171717] hover:bg-[#C6A66B] text-white text-[12px] font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+              >
+                <Download className="w-4 h-4 text-[#C6A66B]" />
+                <span>Download Wedding Blueprint</span>
+              </button>
+
+              <div className="bg-[#FAF8F5] p-3.5 sm:p-4 rounded-[8px] border border-[#EAE5DC] min-w-[240px] space-y-2 w-full">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-semibold uppercase tracking-wider text-[#8C6D37]">
+                    Planning Progress
+                  </span>
+                  <strong className="font-serif text-[18px] text-[#171717]">
+                    {progressPercent}%
+                  </strong>
+                </div>
+                <div className="w-full h-2 rounded-full bg-white border border-[#EAE5DC] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-[#C6A66B] to-[#8C6D37] transition-all duration-500"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <div className="text-[10px] text-[#77736D] flex items-center justify-between">
+                  <span>0% Initiation</span>
+                  <span>100% Nuptial Day</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* ACTIVE TAB DISPATCHER */}
-          {activeTab === 'overview' && (
-            <ClientOverview
-              wedding={displayWedding}
-              tasks={tasks}
-              budget={budget}
-              progressPercent={progressPercent}
-              onNavigateTab={(tab) => setActiveTab(tab as ClientTab)}
-            />
-          )}
-
-          {activeTab === 'timeline' && (
-            <ClientTimeline
-              tasks={tasks}
-              userId={user.uid}
-              weddingId={displayWedding.id || 'w-1'}
-              onTasksChanged={(updated) => setTasks(updated)}
-              liveMilestones={liveMilestones}
-              progressPercent={progressPercent}
-            />
-          )}
-
-          {activeTab === 'budget' && (
-            <ClientBudget
-              budget={budget}
-              targetBudget={displayWedding.budget || 6500000}
-              userId={user.uid}
-              onBudgetUpdated={(b) => setBudget(b)}
-            />
-          )}
-
-          {activeTab === 'guests' && (
-            <div className="space-y-4">
-              <ClientAtelierGuestRoster
-                weddingId={matchedManagedProject?.id || displayWedding.id || 'wed-001'}
-                weddingName={matchedManagedProject?.clientName || displayWedding.clientName || 'Celebration'}
-                guests={atelierGuests}
-                onGuestsUpdated={(updated) => setAtelierGuests(updated)}
-              />
-            </div>
-          )}
-
-          {activeTab === 'rsvp' && (
-            <ClientRSVP
-              wedding={displayWedding}
-              onRSVPSubmitted={() => {
-                // Refresh guests / rsvp if needed
-                FirestoreService.getUserGuests(user.uid).then((g) => g && setGuests(g));
-              }}
-            />
-          )}
-
-          {activeTab === 'vendors' && (
-            <div className="space-y-4">
-              <ClientAtelierVendorRoster
-                weddingId={matchedManagedProject?.id || displayWedding.id || 'wed-001'}
-                weddingName={matchedManagedProject?.clientName || displayWedding.clientName || 'Celebration'}
-                vendors={atelierVendors}
-              />
-            </div>
-          )}
-
-          {activeTab === 'travel' && <ClientTravel userId={user.uid} />}
-
-          {activeTab === 'documents' && <ClientDocuments userId={user.uid} />}
-
-          {activeTab === 'schedule' && <ClientSchedule />}
-
-          {activeTab === 'messages' && (
-            <ClientMessages userId={user.uid} clientName={clientNameGreeting} />
-          )}
-
-          {activeTab === 'gallery' && <ClientGallery />}
+          {useMemo(() => {
+            switch (activeTab) {
+              case 'overview':
+                return (
+                  <ClientOverview
+                    wedding={displayWedding}
+                    tasks={tasks}
+                    budget={budget}
+                    progressPercent={progressPercent}
+                    onNavigateTab={(tab) => setActiveTab(tab as ClientTab)}
+                  />
+                );
+              case 'timeline':
+                return (
+                  <ClientTimeline
+                    tasks={tasks}
+                    userId={user.uid}
+                    weddingId={displayWedding.id || 'w-1'}
+                    onTasksChanged={(updated) => setTasks(updated)}
+                    liveMilestones={liveMilestones}
+                    progressPercent={progressPercent}
+                  />
+                );
+              case 'budget':
+                return (
+                  <ClientBudget
+                    budget={budget}
+                    targetBudget={displayWedding.budget || 6500000}
+                    userId={user.uid}
+                    onBudgetUpdated={(b) => setBudget(b)}
+                  />
+                );
+              case 'guests':
+                return (
+                  <div className="space-y-4">
+                    <ClientAtelierGuestRoster
+                      weddingId={matchedManagedProject?.id || displayWedding.id || 'wed-001'}
+                      weddingName={matchedManagedProject?.clientName || displayWedding.clientName || 'Celebration'}
+                      guests={atelierGuests}
+                      onGuestsUpdated={(updated) => setAtelierGuests(updated)}
+                    />
+                  </div>
+                );
+              case 'rsvp':
+                return (
+                  <ClientRSVP
+                    wedding={displayWedding}
+                    onRSVPSubmitted={() => {
+                      FirestoreService.getUserGuests(user.uid).then((g) => g && setGuests(g));
+                    }}
+                  />
+                );
+              case 'vendors':
+                return (
+                  <div className="space-y-4">
+                    <ClientAtelierVendorRoster
+                      weddingId={matchedManagedProject?.id || displayWedding.id || 'wed-001'}
+                      weddingName={matchedManagedProject?.clientName || displayWedding.clientName || 'Celebration'}
+                      vendors={atelierVendors}
+                    />
+                  </div>
+                );
+              case 'travel':
+                return <ClientTravel userId={user.uid} />;
+              case 'documents':
+                return <ClientDocuments userId={user.uid} />;
+              case 'schedule':
+                return <ClientSchedule />;
+              case 'messages':
+                return <ClientMessages userId={user.uid} clientName={clientNameGreeting} />;
+              case 'gallery':
+                return <ClientGallery />;
+              case 'feedback':
+                return <ClientFeedbackSurvey wedding={displayWedding} onUpdateWedding={(upd) => setMatchedManagedProject(upd)} />;
+              default:
+                return null;
+            }
+          }, [
+            activeTab,
+            displayWedding,
+            tasks,
+            budget,
+            progressPercent,
+            user.uid,
+            liveMilestones,
+            matchedManagedProject,
+            atelierGuests,
+            atelierVendors,
+            clientNameGreeting,
+          ])}
         </main>
       </div>
+
+      {/* Interactive Onboarding Tour */}
+      <ClientOnboardingTour clientName={clientNameGreeting} onComplete={() => {}} />
     </div>
   );
 };

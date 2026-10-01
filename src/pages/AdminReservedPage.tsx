@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAtelierData } from '../context/AtelierDataContext';
 import { useRouter } from '../lib/router';
 import { useToast } from '../components/ui/Toast';
 import { FirestoreService } from '../services/firestoreService';
+import { db } from '../lib/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { PerformanceMonitor, useRenderProfiler, PerformanceMetric, PerformanceSummary } from '../lib/performanceMonitor';
 import {
   LeadDocument,
@@ -20,6 +22,7 @@ import { AdminInquiriesTable } from '../components/admin/AdminInquiriesTable';
 import { WeddingManagement } from '../components/admin/WeddingManagement';
 import { AdminGuestManagement } from '../components/admin/AdminGuestManagement';
 import { AdminVendorManagement } from '../components/admin/AdminVendorManagement';
+import { MilestoneTrendsChart } from '../components/admin/MilestoneTrendsChart';
 import { ManagedWedding, INITIAL_WEDDINGS, DEFAULT_PLANNING_CHECKLIST } from '../components/admin/mockWeddings';
 import { generateLeadAISummary } from '../services/leadSummaryService';
 import {
@@ -66,7 +69,6 @@ type SidebarTab =
   | 'inquiries'
   | 'leads'
   | 'weddings'
-  | 'clients'
   | 'guests'
   | 'vendors'
   | 'analytics'
@@ -144,8 +146,10 @@ export const AdminReservedPage: React.FC = () => {
   }, [activeTab]);
 
   // Fetch all administrative data from Firestore & LocalStorage
+  const isSyncing = useRef(false);
   const loadDashboardData = useCallback(async () => {
-    if (!isAdmin) return;
+    if (!isAdmin || isSyncing.current) return;
+    isSyncing.current = true;
     setLoading(true);
     setErrorMsg(null);
     await PerformanceMonitor.measureAsync(
@@ -194,10 +198,25 @@ export const AdminReservedPage: React.FC = () => {
           setErrorMsg(err?.message || 'Access restricted by Firestore security rules or connection failure.');
         } finally {
           setLoading(false);
+          setTimeout(() => { isSyncing.current = false; }, 500);
         }
       },
-      { thresholdMs: 150, context: 'Admin Pipeline' }
+      { thresholdMs: 600, context: 'Admin Pipeline' }
     );
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const q = query(collection(db, 'leads'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const liveLeads = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as LeadDocument));
+      if (liveLeads.length > 0) {
+        setLeads(liveLeads);
+      }
+    }, (err) => {
+      console.warn('Live admin leads snapshot notice:', err);
+    });
+    return () => unsubscribe();
   }, [isAdmin]);
 
   useEffect(() => {
@@ -713,7 +732,6 @@ export const AdminReservedPage: React.FC = () => {
                 { id: 'inquiries', label: 'Consultations (Live)', icon: Sparkles, badge: atelierLeads.length },
                 { id: 'leads', label: 'Leads Pipeline', icon: Users, badge: atelierLeads.length },
                 { id: 'weddings', label: 'Weddings', icon: Building, badge: atelierWeddings.length },
-                { id: 'clients', label: 'Clients', icon: UserCheck, badge: clients.length || undefined },
                 { id: 'guests', label: 'Guests', icon: HeartHandshake, badge: atelierGuests.length },
                 { id: 'vendors', label: 'Vendors', icon: Store, badge: atelierVendors.length },
                 { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -796,7 +814,6 @@ export const AdminReservedPage: React.FC = () => {
                     { id: 'inquiries', label: 'Consultations (Live)', icon: Sparkles, badge: atelierLeads.length },
                     { id: 'leads', label: 'Leads Pipeline', icon: Users, badge: atelierLeads.length },
                     { id: 'weddings', label: 'Weddings', icon: Building, badge: atelierWeddings.length },
-                    { id: 'clients', label: 'Clients', icon: UserCheck, badge: clients.length || undefined },
                     { id: 'guests', label: 'Guests', icon: HeartHandshake, badge: atelierGuests.length },
                     { id: 'vendors', label: 'Vendors', icon: Store, badge: atelierVendors.length },
                     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -1033,6 +1050,13 @@ export const AdminReservedPage: React.FC = () => {
           {/* VIEW: STANDALONE INQUIRIES TAB */}
           {activeTab === 'inquiries' && (
             <AdminInquiriesTable />
+          )}
+
+          {/* Milestone Trends Chart (Overview only) */}
+          {activeTab === 'overview' && (
+            <div className="mb-6">
+              <MilestoneTrendsChart />
+            </div>
           )}
 
           {/* VIEW: OVERVIEW OR LEADS TABLE */}
@@ -1417,32 +1441,6 @@ export const AdminReservedPage: React.FC = () => {
           {/* VIEW: WEDDINGS */}
           {activeTab === 'weddings' && (
             <WeddingManagement />
-          )}
-
-          {/* VIEW: CLIENTS */}
-          {activeTab === 'clients' && (
-            <div className="bg-white rounded-[8px] border border-[#EAE5DC] overflow-hidden">
-              <div className="p-4 bg-[#FAF8F5] border-b border-[#EAE5DC] flex items-center justify-between">
-                <h3 className="font-serif text-[16px] text-[#171717]">
-                  Commissioned Client Accounts ({clients.length})
-                </h3>
-              </div>
-              <div className="divide-y divide-[#F2EEE6]">
-                {clients.map((c) => (
-                  <div key={c.uid} className="p-4 flex items-center justify-between">
-                    <div>
-                      <strong className="text-[14px] text-[#171717] block">
-                        {c.name || c.displayName || 'Esteemed Guest'}
-                      </strong>
-                      <span className="text-[12px] text-[#77736D] font-mono">{c.email}</span>
-                    </div>
-                    <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-800">
-                      {c.role}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
           )}
 
           {/* VIEW: GUESTS */}

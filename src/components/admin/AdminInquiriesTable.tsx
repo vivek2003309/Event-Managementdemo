@@ -11,9 +11,10 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, setDoc } from 'firebase/firestore';
 import { useToast } from '../ui/Toast';
 import { ManagedWedding, INITIAL_WEDDINGS, DEFAULT_PLANNING_CHECKLIST } from './mockWeddings';
+import { ClientCredentialsModal } from './ClientCredentialsModal';
 import {
   Search,
   Filter,
@@ -143,6 +144,16 @@ export const AdminInquiriesTable: React.FC = () => {
   
   // Detailed modal preview
   const [selectedInquiry, setSelectedInquiry] = useState<WeddingInquiry | null>(null);
+
+  // Client Credentials Modal state
+  const [credentialsModalOpen, setCredentialsModalOpen] = useState(false);
+  const [generatedCredentials, setGeneratedCredentials] = useState<{
+    email: string;
+    name: string;
+    tempPassword: string;
+    weddingId: string;
+    weddingName: string;
+  } | null>(null);
 
   // Load inquiries from localStorage & Firestore
   const loadInquiries = useCallback(async (isManualRefresh = false) => {
@@ -300,7 +311,7 @@ export const AdminInquiriesTable: React.FC = () => {
     });
   };
 
-  // Convert Inbound Lead/Inquiry directly into Managed Wedding
+  // Convert Inbound Lead/Inquiry directly into Managed Wedding & Issue Access
   const handleConvertToWedding = (item: WeddingInquiry) => {
     const clientName = item.fullName || item.name || 'Esteemed Client';
     const partnerName =
@@ -312,9 +323,10 @@ export const AdminInquiriesTable: React.FC = () => {
     const dateVal = item.weddingDate || item.eventDate || item.date || 'TBD';
     const guestsVal = item.guestCount || item.guests || '250';
     const budgetVal = item.budget || item.budgetEnvelope || 'Bespoke';
+    const weddingId = `wed-${Date.now()}`;
 
     const newWedding: ManagedWedding = {
-      id: `wed-${Date.now()}`,
+      id: weddingId,
       clientName,
       partnerName,
       weddingDate: dateVal,
@@ -332,25 +344,63 @@ export const AdminInquiriesTable: React.FC = () => {
       checklist: JSON.parse(JSON.stringify(DEFAULT_PLANNING_CHECKLIST)),
     };
 
-    // Save/append to managed_weddings & wedding_managed_projects in localStorage
+    // Generate secure 8-character temporary password (e.g. WD-7K9M2P)
+    const randomChars = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const tempPassword = `WD-${randomChars}`;
+    const clientEmail = item.email || `${clientName.toLowerCase().replace(/\s+/g, '')}@theweddingdreams.client`;
+
+    const clientAccessRecord = {
+      uid: `client_${weddingId}`,
+      email: clientEmail,
+      name: clientName,
+      tempPassword,
+      weddingId,
+      status: 'active',
+      role: 'client',
+      credentialsSent: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Save/append to managed_weddings & client access credentials
     try {
       const existingRaw = localStorage.getItem('managed_weddings') || localStorage.getItem('wedding_managed_projects');
       const existing: ManagedWedding[] = existingRaw ? JSON.parse(existingRaw) : INITIAL_WEDDINGS;
       const updated = [newWedding, ...existing.filter((w) => w.sourceLeadId !== item.id)];
       localStorage.setItem('managed_weddings', JSON.stringify(updated));
       localStorage.setItem('wedding_managed_projects', JSON.stringify(updated));
+
+      const storedCreds = localStorage.getItem('client_access_credentials') || '[]';
+      const credsList = JSON.parse(storedCreds);
+      localStorage.setItem('client_access_credentials', JSON.stringify([clientAccessRecord, ...credsList]));
+
+      const storedUsers = localStorage.getItem('users_auth_db') || '[]';
+      const usersList = JSON.parse(storedUsers);
+      localStorage.setItem('users_auth_db', JSON.stringify([clientAccessRecord, ...usersList]));
+
       window.dispatchEvent(new CustomEvent('managed_weddings_updated', { detail: newWedding }));
+
+      // Sync client access record to Firestore clients collection
+      setDoc(doc(db, 'clients', `client_${weddingId}`), clientAccessRecord).catch(() => null);
     } catch (e) {
-      console.error('Failed to save converted wedding:', e);
+      console.error('Failed to save converted wedding and credentials:', e);
     }
 
     // Automatically update inquiry status to 'Booked'
     handleStatusChange(item.id, 'Booked');
 
+    setGeneratedCredentials({
+      email: clientEmail,
+      name: clientName,
+      tempPassword,
+      weddingId,
+      weddingName: `${clientName} & ${partnerName}`,
+    });
+    setCredentialsModalOpen(true);
+
     addToast({
       type: 'success',
-      title: 'Commissioned into Weddings',
-      message: 'Project successfully commissioned into Weddings Management',
+      title: 'Commissioned & Access Issued',
+      message: `Project created and temporary access key ${tempPassword} generated.`,
     });
   };
 
@@ -1048,6 +1098,22 @@ export const AdminInquiriesTable: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Client Credentials Dialog */}
+      {generatedCredentials && (
+        <ClientCredentialsModal
+          isOpen={credentialsModalOpen}
+          onClose={() => {
+            setCredentialsModalOpen(false);
+            setGeneratedCredentials(null);
+          }}
+          clientEmail={generatedCredentials.email}
+          clientName={generatedCredentials.name}
+          tempPassword={generatedCredentials.tempPassword}
+          weddingId={generatedCredentials.weddingId}
+          weddingName={generatedCredentials.weddingName}
+        />
       )}
     </div>
   );

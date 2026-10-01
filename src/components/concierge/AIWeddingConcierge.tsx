@@ -412,7 +412,7 @@ export const AIWeddingConcierge: React.FC<AIWeddingConciergeProps> = ({ onOpenLe
                             </button>
 
                             <a
-                              href="https://wa.me/919820048210?text=Namaste%2C%20I%20am%20chatting%20with%20The%20Wedding%20Dreams%20AI%20Concierge%20and%20would%20like%20to%20speak%20with%20a%20human%20expert."
+                              href="https://wa.me/919871211995?text=Hello%20The%20Wedding%20Dreams,%20I%20am%20chatting%20with%20The%20Wedding%20Dreams%20AI%20Concierge%20and%20would%20like%20to%20speak%20with%20a%20human%20expert."
                               target="_blank"
                               rel="noopener noreferrer"
                               className="px-3 py-1.5 rounded-[4px] bg-[#25D366] text-white text-[11px] font-medium hover:bg-[#20ba5a] transition-colors flex items-center justify-center gap-1 cursor-pointer"

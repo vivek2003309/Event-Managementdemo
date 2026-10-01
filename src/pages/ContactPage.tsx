@@ -8,12 +8,14 @@ import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
 import { useToast } from '../components/ui/Toast';
 import { FirestoreService } from '../services/firestoreService';
-import { CheckCircle2, MapPin, Phone, Mail, Clock, AlertCircle } from 'lucide-react';
+import { SPECIALIZED_ATELIER_SERVICES } from '../data/services';
+import { CheckCircle2, MapPin, Phone, Mail, Clock, AlertCircle, Globe } from 'lucide-react';
 
 export const ContactPage: React.FC = () => {
   const { addToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -23,9 +25,12 @@ export const ContactPage: React.FC = () => {
     destination: 'Udaipur, Rajasthan',
     guests: '300',
     budget: '₹1 Cr – ₹3 Cr',
+    selectedService: SPECIALIZED_ATELIER_SERVICES[0],
     dates: '',
     notes: '',
   });
+
+  const mapsUrl = 'https://www.google.com/maps/dir//Ground+Floor,+The+Wedding+Dreams+by+Varun+Rathor,+1%2F202%2F35,Sadar+Bazar+Road,+Road,+Piru+Vihar,+Sadar+Bazaar,+Delhi+Cantonment,+New+Delhi,+Delhi+110010/data=!4m6!4m5!1m1!4e2!1m2!1m1!1s0x390d1bf38a125f05:0xfd970fea30b8de89?sa=X&ved=1t:57443&ictx=111';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +63,7 @@ export const ContactPage: React.FC = () => {
         location: formData.destination,
         guestCount: Number(formData.guests) || 300,
         budget: formData.budget,
-        services: ['Complete Planning', 'Décor & Scenography', 'Hospitality'],
+        services: [formData.selectedService, 'Directorial Curation'],
         source: 'Contact Page Inquiry',
         status: 'new',
         notes: formData.notes.trim() || 'Direct inquiry via Contact Page.',
@@ -100,10 +105,10 @@ export const ContactPage: React.FC = () => {
               <div className="p-8 bg-white rounded-[8px] border border-[#EAE5DC] shadow-sm space-y-6">
                 <div>
                   <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#C6A66B] block mb-1">
-                    Directorial Studio
+                    Legal Business Entity
                   </span>
                   <h3 className="font-serif text-[24px] text-[#171717] font-normal">
-                    The Wedding Dreams Headquarters
+                    The Wedding Dreams by Varun Rathor
                   </h3>
                   <p className="text-[13px] text-[#77736D] mt-2 leading-relaxed">
                     Private consultations hosted by appointment across our studio salons.
@@ -114,31 +119,44 @@ export const ContactPage: React.FC = () => {
                   <div className="flex items-start gap-3">
                     <MapPin className="w-4 h-4 text-[#C6A66B] shrink-0 mt-0.5" />
                     <div>
-                      <strong>Mumbai Atelier:</strong> 42 Nariman Point, Marine Drive, Mumbai 400021
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-4 h-4 text-[#C6A66B] shrink-0 mt-0.5" />
-                    <div>
-                      <strong>Delhi Salon:</strong> 18 Barakhamba Avenue, Connaught Place, New Delhi 110001
+                      <strong className="block text-[#171717] font-semibold">Studio Address:</strong>
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#77736D] hover:text-[#C6A66B] underline transition-colors block mt-0.5"
+                      >
+                        Ground Floor, 1/202/35, Sadar Bazar Road, Piru Vihar, Sadar Bazaar, Delhi Cantonment, New Delhi, Delhi 110010
+                      </a>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Phone className="w-4 h-4 text-[#C6A66B] shrink-0 mt-0.5" />
                     <div>
-                      <strong>Private Line:</strong> +91 (0) 98200 48210
+                      <strong>Mobile / WhatsApp:</strong> +91 9871211995
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Mail className="w-4 h-4 text-[#C6A66B] shrink-0 mt-0.5" />
                     <div>
-                      <strong>Directorial Inquiries:</strong> atelier@theweddingdreams.com
+                      <strong>Grievance &amp; Inquiries:</strong>{' '}
+                      <a href="mailto:inquiries@theweddingdreams.com" className="text-[#C6A66B] hover:underline">
+                        inquiries@theweddingdreams.com
+                      </a>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Clock className="w-4 h-4 text-[#C6A66B] shrink-0 mt-0.5" />
+                    <Globe className="w-4 h-4 text-[#C6A66B] shrink-0 mt-0.5" />
                     <div>
-                      <strong>Concierge Response:</strong> Within 12 business hours
+                      <strong>Official Portal:</strong>{' '}
+                      <a
+                        href="https://event-managementdemo.vercel.app/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#C6A66B] hover:underline"
+                      >
+                        event-managementdemo.vercel.app
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -199,6 +217,15 @@ export const ContactPage: React.FC = () => {
                     />
                   </div>
 
+                  <div className="space-y-4">
+                    <Select
+                      label="Primary Service Discipline"
+                      value={formData.selectedService}
+                      onChange={(e) => setFormData({ ...formData, selectedService: e.target.value })}
+                      options={SPECIALIZED_ATELIER_SERVICES.map((srv) => ({ value: srv, label: srv }))}
+                    />
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <Select
                       label="Preferred Enclave"
@@ -245,6 +272,29 @@ export const ContactPage: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   />
 
+                  {/* DPDP Compliance Checkbox */}
+                  <div className="p-3.5 bg-[#FAF8F5] border border-[#EAE5DC] rounded-[4px] flex items-start gap-3 text-[12px] text-[#55524E]">
+                    <input
+                      type="checkbox"
+                      id="dpdp-consent-contact"
+                      checked={consentChecked}
+                      onChange={(e) => setConsentChecked(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded border-[#EAE5DC] text-[#C6A66B] focus:ring-[#C6A66B] cursor-pointer shrink-0"
+                    />
+                    <label htmlFor="dpdp-consent-contact" className="leading-snug cursor-pointer select-none">
+                      I consent to The Wedding Dreams processing my submitted contact coordinates for event curation and directorial consultations in accordance with the{' '}
+                      <a
+                        href="/privacy-policy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#C6A66B] underline font-medium hover:text-[#171717] transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Privacy Policy
+                      </a>.
+                    </label>
+                  </div>
+
                   {errorMessage && (
                     <div className="p-3 bg-[#FDF2F2] border border-[#F2C0C0] text-[#BA1A1A] text-[12px] rounded-[4px] flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 shrink-0" />
@@ -257,7 +307,7 @@ export const ContactPage: React.FC = () => {
                       variant="accent"
                       size="lg"
                       type="submit"
-                      disabled={isSubmitting}
+                      disabled={!consentChecked || isSubmitting}
                       className="cursor-pointer"
                     >
                       {isSubmitting ? (

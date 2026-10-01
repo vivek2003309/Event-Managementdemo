@@ -119,7 +119,7 @@ export const PhoneAuthTab: React.FC = () => {
       addToast({
         type: 'success',
         title: 'SMS Dispatched',
-        message: `A 6-digit verification passkey was transmitted to ${countryCode} ${cleanNumber}.`,
+        message: `A 6-digit verification passkey was transmitted to ${countryCode} ${cleanNumber}. (Demo code: 123456)`,
       });
 
       // Auto-focus first OTP input after render
@@ -141,6 +141,8 @@ export const PhoneAuthTab: React.FC = () => {
           ? 'Invalid phone number format. Please verify your country code.'
           : err?.code === 'auth/too-many-requests'
           ? 'SMS rate limit exceeded. Please wait a few moments before trying again.'
+          : err?.code === 'auth/operation-not-allowed'
+          ? 'SMS authentication is restricted by Firebase region policy. Please sign in with Google or Email, or use test code 123456.'
           : err?.message || 'Unable to send SMS verification code. Please check details.';
       setErrorMsg(msg);
     } finally {
@@ -280,9 +282,20 @@ export const PhoneAuthTab: React.FC = () => {
                 <Phone className="w-3.5 h-3.5 text-[#C6A66B] absolute left-3 top-3" />
               </div>
             </div>
-            <p className="text-[11px] text-[#9C968C] font-light mt-1">
-              A private 6-digit cryptographic passkey will be transmitted via SMS.
-            </p>
+            <div className="flex items-center justify-between text-[11px] text-[#9C968C] font-light mt-1">
+              <span>6-digit cryptographic passkey via SMS</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setCountryCode('+91');
+                  setPhoneNumber('99999 99999');
+                  if (!fullName) setFullName('Radhika Merchant');
+                }}
+                className="text-[#8C6D37] hover:underline font-medium cursor-pointer"
+              >
+                Fill test mobile
+              </button>
+            </div>
           </div>
 
           <button

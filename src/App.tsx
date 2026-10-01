@@ -30,6 +30,11 @@ import { ClientReservedPage } from './pages/ClientReservedPage';
 import { AdminReservedPage } from './pages/AdminReservedPage';
 import { AuthPage } from './pages/AuthPage';
 import { LegalPage } from './pages/LegalPage';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { TermsPage } from './pages/TermsPage';
+import { RefundPolicyPage } from './pages/RefundPolicyPage';
+import { CookiePolicyPage } from './pages/CookiePolicyPage';
+import { CookieBanner } from './components/common/CookieBanner';
 import { AuthProvider } from './context/AuthContext';
 import { AtelierDataProvider } from './context/AtelierDataContext';
 
@@ -108,9 +113,15 @@ function AppContent() {
       case '/budget-planner':
         return <BudgetPlannerPage onOpenLetTalk={() => setIsConsultationOpen(true)} />;
       case '/privacy':
-        return <LegalPage type="privacy" />;
+      case '/privacy-policy':
+        return <PrivacyPolicyPage />;
       case '/terms':
-        return <LegalPage type="terms" />;
+        return <TermsPage />;
+      case '/refund-policy':
+        return <RefundPolicyPage />;
+      case '/cookies':
+      case '/cookie-policy':
+        return <CookiePolicyPage />;
       case '/':
       default:
         return (
@@ -152,6 +163,9 @@ function AppContent() {
         isOpen={isConsultationOpen}
         onClose={() => setIsConsultationOpen(false)}
       />
+
+      {/* Discreet Cookie & Discretion Banner */}
+      <CookieBanner />
     </div>
   );
 }

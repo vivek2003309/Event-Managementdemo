@@ -2,8 +2,12 @@ import React, { useState } from 'react';
 import { LeadDocument, LeadStatus, WeddingPlanDocument } from '../../types/firebase';
 import { generateLeadAISummary } from '../../services/leadSummaryService';
 import { FirestoreService } from '../../services/firestoreService';
+import { db } from '../../lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '../ui/Toast';
 import { ManagedWedding, INITIAL_WEDDINGS, DEFAULT_PLANNING_CHECKLIST } from './mockWeddings';
+import { ClientCredentialsModal } from './ClientCredentialsModal';
+import { generateLuxuryProposalPDF } from '../../services/proposalPdfService';
 import {
   X,
   Sparkles,
@@ -24,6 +28,7 @@ import {
   AlertCircle,
   HelpCircle,
   UserCheck,
+  Download,
 } from 'lucide-react';
 
 interface LeadDetailModalProps {
@@ -62,6 +67,15 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   const [followUpDate, setFollowUpDate] = useState(lead.followUpDate || '');
   const [savingStatus, setSavingStatus] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'plan' | 'notes'>('details');
+
+  const [credentialsModalOpen, setCredentialsModalOpen] = useState(false);
+  const [generatedCredentials, setGeneratedCredentials] = useState<{
+    email: string;
+    name: string;
+    tempPassword: string;
+    weddingId: string;
+    weddingName: string;
+  } | null>(null);
 
   if (!isOpen) return null;
 
@@ -159,8 +173,9 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
         ? (currentLead as any).partnerName.trim()
         : 'Not Available';
 
+    const weddingId = `wed-${Date.now()}`;
     const newWedding: ManagedWedding = {
-      id: `wed-${Date.now()}`,
+      id: weddingId,
       clientName,
       partnerName,
       weddingDate: currentLead.weddingDate || 'TBD',
@@ -178,22 +193,61 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
       checklist: JSON.parse(JSON.stringify(DEFAULT_PLANNING_CHECKLIST)),
     };
 
+    // Generate secure 8-character temporary password (e.g. WD-7K9M2P)
+    const randomChars = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const tempPassword = `WD-${randomChars}`;
+    const clientEmail = currentLead.email || `${clientName.toLowerCase().replace(/\s+/g, '')}@theweddingdreams.client`;
+
+    const clientAccessRecord = {
+      uid: `client_${weddingId}`,
+      email: clientEmail,
+      name: clientName,
+      tempPassword,
+      weddingId,
+      status: 'active',
+      role: 'client',
+      credentialsSent: true,
+      createdAt: new Date().toISOString(),
+    };
+
     try {
       const stored = localStorage.getItem('managed_weddings') || localStorage.getItem('wedding_managed_projects');
       const list: ManagedWedding[] = stored ? JSON.parse(stored) : INITIAL_WEDDINGS;
       const updated = [newWedding, ...list.filter((w: any) => w.sourceLeadId !== currentLead.id)];
       localStorage.setItem('managed_weddings', JSON.stringify(updated));
       localStorage.setItem('wedding_managed_projects', JSON.stringify(updated));
+
+      const storedCreds = localStorage.getItem('client_access_credentials') || '[]';
+      const credsList = JSON.parse(storedCreds);
+      localStorage.setItem('client_access_credentials', JSON.stringify([clientAccessRecord, ...credsList]));
+
+      const storedUsers = localStorage.getItem('users_auth_db') || '[]';
+      const usersList = JSON.parse(storedUsers);
+      localStorage.setItem('users_auth_db', JSON.stringify([clientAccessRecord, ...usersList]));
+
       window.dispatchEvent(new CustomEvent('managed_weddings_updated', { detail: newWedding }));
+
+      // Sync client access record to Firestore clients collection
+      setDoc(doc(db, 'clients', `client_${weddingId}`), clientAccessRecord).catch(() => null);
     } catch (e) {
       console.error(e);
     }
 
     handleStatusChange('won');
+
+    setGeneratedCredentials({
+      email: clientEmail,
+      name: clientName,
+      tempPassword,
+      weddingId,
+      weddingName: `${clientName} & ${partnerName}`,
+    });
+    setCredentialsModalOpen(true);
+
     addToast({
       type: 'success',
-      title: 'Converted to Managed Wedding',
-      message: `Project created for ${clientName} & ${partnerName}. View under the Weddings tab.`,
+      title: 'Converted & Access Issued',
+      message: `Project created and temporary access key ${tempPassword} generated.`,
     });
   };
 
@@ -253,11 +307,28 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
           {/* AI-Generated Lead Summary Section */}
           <div className="bg-[#FAF8F5] border border-[#C6A66B]/40 rounded-[8px] p-4.5 relative overflow-hidden shadow-xs">
             <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#C6A66B]" />
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-[#8C6D37]" />
-              <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#8C6D37]">
-                AI-Generated Executive Summary
-              </span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#8C6D37]" />
+                <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#8C6D37]">
+                  AI-Generated Executive Summary
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  generateLuxuryProposalPDF(currentLead, plan);
+                  addToast({
+                    type: 'success',
+                    title: 'Proposal Exported',
+                    message: 'Luxury Proposal PDF generated successfully.',
+                  });
+                }}
+                className="px-3.5 py-2 rounded-[4px] bg-[#171717] hover:bg-[#C6A66B] text-white text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Download className="w-3.5 h-3.5 text-[#C6A66B]" />
+                <span>EXPORT LUXURY PROPOSAL (PDF)</span>
+              </button>
             </div>
             <p className="text-[13px] sm:text-[14px] text-[#171717] leading-relaxed font-light pl-0.5">
               "{aiSummary}"
@@ -611,6 +682,22 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Client Credentials Dialog */}
+      {generatedCredentials && (
+        <ClientCredentialsModal
+          isOpen={credentialsModalOpen}
+          onClose={() => {
+            setCredentialsModalOpen(false);
+            setGeneratedCredentials(null);
+          }}
+          clientEmail={generatedCredentials.email}
+          clientName={generatedCredentials.name}
+          tempPassword={generatedCredentials.tempPassword}
+          weddingId={generatedCredentials.weddingId}
+          weddingName={generatedCredentials.weddingName}
+        />
+      )}
     </div>
   );
 };

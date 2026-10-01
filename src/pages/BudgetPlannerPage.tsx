@@ -790,7 +790,7 @@ export const BudgetPlannerPage: React.FC<{ onOpenLetTalk: () => void }> = ({ onO
                   </Button>
 
                   <a
-                    href={`https://wa.me/919820048210?text=Namaste%2C%20I%20have%20modeled%20a%20wedding%20budget%20of%20${encodeURIComponent(formatRupees(targetBudget))}%20for%20${guestCount}%20guests%20in%20${encodeURIComponent(location)}%20on%20The%20Wedding%20Dreams%20Budget%20Planner.%20I%20would%20love%20to%20review%20this%20with%20an%20expert.`}
+                    href={`https://wa.me/919871211995?text=Hello%20The%20Wedding%20Dreams,%20I%20have%20modeled%20a%20wedding%20budget%20of%20${encodeURIComponent(formatRupees(targetBudget))}%20for%20${guestCount}%20guests%20in%20${encodeURIComponent(location)}%20on%20The%20Wedding%20Dreams%20Budget%20Planner.%20I%20would%20love%20to%20review%20this%20with%20an%20expert.`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center gap-2 py-3 px-5 rounded-[4px] bg-[#25D366] text-white text-[13px] font-medium hover:bg-[#20ba5a] transition-colors cursor-pointer"

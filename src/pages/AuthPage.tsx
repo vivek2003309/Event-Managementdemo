@@ -349,170 +349,88 @@ export const AuthPage: React.FC = () => {
             </div>
           )}
 
-          {/* Google Sign-In (Preferred for zero password friction) */}
-          {mode !== 'forgot' && (
-            <div className="space-y-4 mb-6">
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={submitting}
-                className="w-full py-2.5 px-4 rounded-[4px] bg-white border border-[#D6CEBE] hover:border-[#171717] hover:bg-[#FAF8F5] text-[#171717] text-[12px] font-medium uppercase tracking-[0.1em] flex items-center justify-center gap-3 transition-all cursor-pointer shadow-xs disabled:opacity-50"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <span>Continue with Google</span>
-              </button>
-
-              <div className="relative flex items-center justify-center">
-                <div className="border-t border-[#EAE5DC] w-full" />
-                <span className="bg-white px-3 text-[10px] uppercase tracking-widest text-[#9C968C] absolute font-medium">
-                  {isAdminMode ? 'Or Directorial Credentials' : 'Or Select Direct Authentication'}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Authentication Method Selector for Clients */}
-          {!isAdminMode && mode !== 'forgot' && (
-            <div className="flex rounded-[6px] bg-[#FAF8F5] p-1 border border-[#EAE5DC] mb-5 text-[11px] font-medium">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMethod('phone');
-                  clearError();
-                }}
-                className={`flex-1 py-1.5 rounded-[4px] transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  authMethod === 'phone'
-                    ? 'bg-[#171717] text-white font-semibold shadow-xs'
-                    : 'text-[#77736D] hover:text-[#171717]'
-                }`}
-              >
-                <Phone className="w-3.5 h-3.5 text-[#C6A66B]" />
-                <span>Mobile SMS Passkey</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMethod('email');
-                  clearError();
-                }}
-                className={`flex-1 py-1.5 rounded-[4px] transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  authMethod === 'email'
-                    ? 'bg-[#171717] text-white font-semibold shadow-xs'
-                    : 'text-[#77736D] hover:text-[#171717]'
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5 text-[#C6A66B]" />
-                <span>Email &amp; Password</span>
-              </button>
-            </div>
-          )}
-
-          {/* Phone OTP Tab */}
-          {!isAdminMode && mode !== 'forgot' && authMethod === 'phone' ? (
-            <PhoneAuthTab />
-          ) : (
-            /* Email Form */
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === 'signup' && (
-                <div>
-                  <label className="text-[11px] uppercase tracking-wider font-semibold text-[#77736D] block mb-1">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Radhika Sharma"
-                    className="w-full bg-[#FAF8F5] text-[13px] py-2 px-3 rounded-[4px] border border-[#EAE5DC] focus:outline-none focus:border-[#C6A66B] focus:bg-white"
-                  />
-                </div>
-              )}
-
+          {/* Email & Password Form (Strictly Email + Password for both Admin and Client) */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {isAdminMode && mode === 'signup' && (
               <div>
                 <label className="text-[11px] uppercase tracking-wider font-semibold text-[#77736D] block mb-1">
-                  Email Address
+                  Full Name
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="client@theweddingdreams.com"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Radhika Sharma"
                   className="w-full bg-[#FAF8F5] text-[13px] py-2 px-3 rounded-[4px] border border-[#EAE5DC] focus:outline-none focus:border-[#C6A66B] focus:bg-white"
                 />
               </div>
+            )}
 
-              {mode !== 'forgot' && (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[11px] uppercase tracking-wider font-semibold text-[#77736D]">
-                      Password
-                    </label>
-                    {mode === 'login' && (
-                      <button
-                        type="button"
-                        onClick={() => setMode('forgot')}
-                        className="text-[10px] text-[#8C6D37] hover:underline cursor-pointer"
-                      >
-                        Forgot password?
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-[#FAF8F5] text-[13px] py-2 px-3 rounded-[4px] border border-[#EAE5DC] focus:outline-none focus:border-[#C6A66B] focus:bg-white"
-                  />
+            <div>
+              <label className="text-[11px] uppercase tracking-wider font-semibold text-[#77736D] block mb-1">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={isAdminMode ? "admin@theweddingdreams.com" : "Enter registered client email"}
+                className="w-full bg-[#FAF8F5] text-[13px] py-2.5 px-3 rounded-[4px] border border-[#EAE5DC] focus:outline-none focus:border-[#C6A66B] focus:bg-white"
+              />
+            </div>
+
+            {mode !== 'forgot' && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] uppercase tracking-wider font-semibold text-[#77736D]">
+                    {isAdminMode ? 'Password' : 'Atelier Access Key / Password'}
+                  </label>
+                  {isAdminMode && mode === 'login' && (
+                    <button
+                      type="button"
+                      onClick={() => setMode('forgot')}
+                      className="text-[10px] text-[#8C6D37] hover:underline cursor-pointer"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
                 </div>
-              )}
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={isAdminMode ? "Admin@Wedding2026" : "Enter admin-issued access password"}
+                  className="w-full bg-[#FAF8F5] text-[13px] py-2.5 px-3 rounded-[4px] border border-[#EAE5DC] focus:outline-none focus:border-[#C6A66B] focus:bg-white"
+                />
+              </div>
+            )}
 
-              <Button
-                variant="primary"
-                size="md"
-                type="submit"
-                disabled={submitting}
-                className="w-full justify-center mt-2 cursor-pointer shadow-sm"
-                rightIcon={
-                  submitting ? (
-                    <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <ArrowRight className="w-4 h-4 text-[#C6A66B]" />
-                  )
-                }
-              >
-                {submitting
-                  ? 'Authenticating...'
-                  : mode === 'forgot'
-                  ? 'Send Recovery Link'
-                  : mode === 'signup'
-                  ? 'Create My Client Account'
-                  : isAdminMode
-                  ? 'Authenticate as Director'
-                  : 'Enter Client Sanctuary'}
-              </Button>
-            </form>
-          )}
+            <Button
+              variant="primary"
+              size="md"
+              type="submit"
+              disabled={submitting}
+              className="w-full justify-center mt-3 py-3 cursor-pointer shadow-sm bg-[#171717] text-white hover:bg-[#C6A66B] uppercase tracking-[0.12em] font-medium"
+              rightIcon={
+                submitting ? (
+                  <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <ArrowRight className="w-4 h-4 text-[#C6A66B]" />
+                )
+              }
+            >
+              {submitting
+                ? 'Authenticating...'
+                : mode === 'forgot'
+                ? 'Send Recovery Link'
+                : isAdminMode
+                ? 'AUTHENTICATE AS DIRECTOR'
+                : 'ENTER CLIENT SANCTUARY'}
+            </Button>
+          </form>
 
           {/* Toggle between Login, Signup, and Forgot */}
           <div className="mt-6 pt-4 border-t border-[#EAE5DC] text-center text-[12px] text-[#77736D]">

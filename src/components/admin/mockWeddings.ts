@@ -14,6 +14,13 @@ export interface WeddingMilestone {
   progress: number; // 0 - 100
 }
 
+export interface DirectorialNote {
+  id: string;
+  text: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface ManagedWedding {
   id: string;
   clientName: string;
@@ -28,9 +35,27 @@ export interface ManagedWedding {
   aesthetic?: string;
   status: 'planning' | 'in_progress' | 'confirmed' | 'completed' | 'archived' | string;
   notes?: string;
+  directorialNotes?: DirectorialNote[];
   sourceLeadId?: string;
   createdAt: string;
   checklist: WeddingMilestone[];
+  postWeddingFeedback?: {
+    ratings: {
+      planning: number;
+      scenography: number;
+      logistics: number;
+      hospitality: number;
+      overall: number;
+    };
+    comments: {
+      planning: string;
+      scenography: string;
+      logistics: string;
+      hospitality: string;
+    };
+    testimonial: string;
+    submittedAt: string;
+  };
 }
 
 export const DEFAULT_PLANNING_CHECKLIST: WeddingMilestone[] = [

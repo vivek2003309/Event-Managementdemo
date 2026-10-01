@@ -13,6 +13,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ManagedWedding, WeddingMilestone, INITIAL_WEDDINGS, DEFAULT_PLANNING_CHECKLIST } from './mockWeddings';
 import { useToast } from '../ui/Toast';
+import { generateLuxuryProposalPDF } from '../../services/proposalPdfService';
 import {
   Building,
   Calendar,
@@ -35,6 +36,7 @@ import {
   Sliders,
   ChevronLeft,
   ChevronRight,
+  Award,
 } from 'lucide-react';
 
 const STORAGE_KEY = 'managed_weddings';
@@ -48,6 +50,54 @@ export const WeddingManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedWedding, setSelectedWedding] = useState<ManagedWedding | null>(null);
+  const [newNoteText, setNewNoteText] = useState('');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState('');
+
+  // Directorial Notes Handlers
+  const handleAddDirectorialNote = () => {
+    if (!selectedWedding || !newNoteText.trim()) return;
+    const note = {
+      id: `note_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      text: newNoteText.trim(),
+      createdAt: new Date().toLocaleString(),
+    };
+    const updatedNotes = [note, ...(selectedWedding.directorialNotes || [])];
+    const updatedWedding = { ...selectedWedding, directorialNotes: updatedNotes };
+    setSelectedWedding(updatedWedding);
+
+    const updatedWeddings = weddings.map((w) => (w.id === updatedWedding.id ? updatedWedding : w));
+    saveWeddings(updatedWeddings);
+    setNewNoteText('');
+    addToast({ type: 'success', title: 'Note Added', message: 'Directorial note recorded securely.' });
+  };
+
+  const handleUpdateDirectorialNote = (noteId: string) => {
+    if (!selectedWedding || !editingNoteText.trim()) return;
+    const updatedNotes = (selectedWedding.directorialNotes || []).map((n) =>
+      n.id === noteId ? { ...n, text: editingNoteText.trim(), updatedAt: new Date().toLocaleString() } : n
+    );
+    const updatedWedding = { ...selectedWedding, directorialNotes: updatedNotes };
+    setSelectedWedding(updatedWedding);
+
+    const updatedWeddings = weddings.map((w) => (w.id === updatedWedding.id ? updatedWedding : w));
+    saveWeddings(updatedWeddings);
+    setEditingNoteId(null);
+    setEditingNoteText('');
+    addToast({ type: 'success', title: 'Note Updated', message: 'Directorial note updated successfully.' });
+  };
+
+  const handleDeleteDirectorialNote = (noteId: string) => {
+    if (!selectedWedding) return;
+    if (!window.confirm('Permanently remove this directorial note?')) return;
+    const updatedNotes = (selectedWedding.directorialNotes || []).filter((n) => n.id !== noteId);
+    const updatedWedding = { ...selectedWedding, directorialNotes: updatedNotes };
+    setSelectedWedding(updatedWedding);
+
+    const updatedWeddings = weddings.map((w) => (w.id === updatedWedding.id ? updatedWedding : w));
+    saveWeddings(updatedWeddings);
+    addToast({ type: 'info', title: 'Note Removed', message: 'Directorial note deleted.' });
+  };
 
   // Load from localStorage or seed initial data
   const loadWeddings = useCallback((isManual = false) => {
@@ -57,9 +107,10 @@ export const WeddingManagement: React.FC = () => {
       if (stored) {
         try {
           const parsed: ManagedWedding[] = JSON.parse(stored);
-          // Ensure all items have checklist initialized
+          // Ensure all items have checklist & directorialNotes initialized
           const withChecklists = parsed.map((item) => ({
             ...item,
+            directorialNotes: item.directorialNotes || [],
             checklist:
               item.checklist && item.checklist.length > 0
                 ? item.checklist
@@ -699,12 +750,23 @@ export const WeddingManagement: React.FC = () => {
                     ` & ${selectedWedding.partnerName}`}
                 </h3>
               </div>
-              <button
-                onClick={() => setSelectedWedding(null)}
-                className="p-1.5 text-white/70 hover:text-white rounded-[4px] hover:bg-white/10 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    generateLuxuryProposalPDF(selectedWedding);
+                    addToast({ type: 'success', title: 'Proposal Exported', message: 'Luxury Proposal PDF generated successfully.' });
+                  }}
+                  className="px-4 py-2 bg-[#C5A059] text-white hover:bg-[#b08d46] text-xs font-serif tracking-widest uppercase transition-all rounded shadow-md flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Export Luxury Proposal (PDF)</span>
+                </button>
+                <button
+                  onClick={() => setSelectedWedding(null)}
+                  className="p-1.5 text-white/70 hover:text-white rounded-[4px] hover:bg-white/10 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Scrollable Body */}
@@ -855,11 +917,159 @@ export const WeddingManagement: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* Post-Wedding Client Evaluation & Survey Feedback */}
+              {selectedWedding.postWeddingFeedback && (
+                <div className="space-y-3 bg-[#FAF8F5] p-4 rounded-[8px] border border-[#C6A66B]/40">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-4 h-4 text-[#C6A66B]" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8C6D37]">
+                      Post-Wedding Client Evaluation & Ratings
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[12px]">
+                    <div className="bg-white p-3 rounded border border-[#EAE5DC]">
+                      <span className="text-[#77736D] block">Planning & Coordination</span>
+                      <span className="font-semibold text-[#171717]">{selectedWedding.postWeddingFeedback.ratings?.planning}/5 Stars</span>
+                      {selectedWedding.postWeddingFeedback.comments?.planning && (
+                        <p className="text-[11px] text-[#55524E] mt-1 font-light">"{selectedWedding.postWeddingFeedback.comments.planning}"</p>
+                      )}
+                    </div>
+                    <div className="bg-white p-3 rounded border border-[#EAE5DC]">
+                      <span className="text-[#77736D] block">Couture Scenography & Decor</span>
+                      <span className="font-semibold text-[#171717]">{selectedWedding.postWeddingFeedback.ratings?.scenography}/5 Stars</span>
+                      {selectedWedding.postWeddingFeedback.comments?.scenography && (
+                        <p className="text-[11px] text-[#55524E] mt-1 font-light">"{selectedWedding.postWeddingFeedback.comments.scenography}"</p>
+                      )}
+                    </div>
+                    <div className="bg-white p-3 rounded border border-[#EAE5DC]">
+                      <span className="text-[#77736D] block">Production Logistics & AV</span>
+                      <span className="font-semibold text-[#171717]">{selectedWedding.postWeddingFeedback.ratings?.logistics}/5 Stars</span>
+                    </div>
+                    <div className="bg-white p-3 rounded border border-[#EAE5DC]">
+                      <span className="text-[#77736D] block">Hospitality & Guest Curation</span>
+                      <span className="font-semibold text-[#171717]">{selectedWedding.postWeddingFeedback.ratings?.hospitality}/5 Stars</span>
+                    </div>
+                  </div>
+                  {selectedWedding.postWeddingFeedback.testimonial && (
+                    <div className="bg-white p-3 rounded border border-[#EAE5DC] space-y-1">
+                      <span className="text-[10px] uppercase tracking-wider text-[#77736D] font-semibold block">Private Client Testimonial</span>
+                      <p className="text-[12px] text-[#171717] italic font-light">"{selectedWedding.postWeddingFeedback.testimonial}"</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* DIRECTORIAL NOTES (INTERNAL ONLY) */}
+              <div className="p-4 bg-[#171717] text-white rounded-[8px] border border-[#C6A66B]/40 space-y-4 shadow-sm">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#C6A66B] animate-pulse" />
+                    <span className="font-serif text-[14px] text-white font-normal tracking-wide">
+                      DIRECTORIAL NOTES (INTERNAL ONLY)
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#C6A66B]/20 text-[#C6A66B] border border-[#C6A66B]/30 uppercase tracking-widest">
+                    🔒 Private Atelier Eyes Only
+                  </span>
+                </div>
+
+                {/* Add Note Input */}
+                <div className="space-y-2">
+                  <textarea
+                    rows={2}
+                    value={newNoteText}
+                    onChange={(e) => setNewNoteText(e.target.value)}
+                    placeholder="Enter confidential director observation, vendor negotiation detail, or VIP instruction..."
+                    className="w-full bg-white/5 border border-white/20 rounded-[6px] p-2.5 text-[12px] text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#C6A66B]"
+                  />
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleAddDirectorialNote}
+                      disabled={!newNoteText.trim()}
+                      className="px-4 py-1.5 rounded-[4px] bg-[#C6A66B] text-[#171717] font-medium text-[11px] uppercase tracking-wider hover:bg-[#d4b475] transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      Add Note
+                    </button>
+                  </div>
+                </div>
+
+                {/* Notes List */}
+                <div className="space-y-3 pt-2">
+                  {(!selectedWedding.directorialNotes || selectedWedding.directorialNotes.length === 0) ? (
+                    <div className="text-center py-4 text-neutral-400 text-[11px] italic">
+                      No internal directorial notes recorded yet.
+                    </div>
+                  ) : (
+                    selectedWedding.directorialNotes.map((note) => (
+                      <div key={note.id} className="p-3 bg-white/5 border border-white/10 rounded-[6px] space-y-2">
+                        <div className="flex items-center justify-between text-[10px] text-[#C6A66B] font-mono">
+                          <span>{note.createdAt} {note.updatedAt && `(Edited: ${note.updatedAt})`}</span>
+                          <div className="flex items-center gap-1">
+                            {editingNoteId === note.id ? (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateDirectorialNote(note.id)}
+                                className="text-emerald-400 hover:text-emerald-300 font-medium px-1 cursor-pointer"
+                              >
+                                Save
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingNoteId(note.id);
+                                  setEditingNoteText(note.text);
+                                }}
+                                className="text-white/70 hover:text-white px-1 cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDirectorialNote(note.id)}
+                              className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer"
+                              title="Delete Note"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {editingNoteId === note.id ? (
+                          <textarea
+                            rows={2}
+                            value={editingNoteText}
+                            onChange={(e) => setEditingNoteText(e.target.value)}
+                            className="w-full bg-white/10 border border-[#C6A66B] rounded-[4px] p-2 text-[12px] text-white focus:outline-none"
+                          />
+                        ) : (
+                          <p className="text-[12px] text-white/90 leading-relaxed font-light whitespace-pre-wrap">
+                            {note.text}
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Modal Actions Footer */}
             <div className="p-4 border-t border-[#EAE5DC] bg-[#FAF8F5] flex flex-wrap items-center justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button 
+                  onClick={() => {
+                    generateLuxuryProposalPDF(selectedWedding);
+                    addToast({ type: 'success', title: 'Proposal Exported', message: 'Luxury Proposal PDF generated successfully.' });
+                  }}
+                  className="px-4 py-2 bg-[#C5A059] text-white hover:bg-[#b08d46] text-xs font-serif tracking-widest uppercase transition-all rounded shadow-md flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Export Luxury Proposal (PDF)</span>
+                </button>
+
                 {/* Archive Button */}
                 <button
                   onClick={() => handleArchive(selectedWedding.id, selectedWedding.clientName)}

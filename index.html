@@ -1,6 +1,13 @@
 <!doctype html>
 <html lang="en" class="scroll-smooth">
   <head>
+    <script>
+      window.addEventListener('unhandledrejection', (e) => {
+        if (e.reason?.message?.includes('WebSocket') || (typeof e.reason === 'string' && e.reason.includes('WebSocket'))) {
+          e.preventDefault();
+        }
+      });
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
@@ -12,9 +19,9 @@
     <title>The Wedding Dreams — Couture & Scenography</title>
     <meta
       name="description"
-      content="The Wedding Dreams — Couture & scenography for luxury destination weddings, heritage palace takeovers, and bespoke bridal celebrations."
+      content="The Wedding Dreams — Ground Floor, 1/202/35, Sadar Bazar Road, Piru Vihar, Sadar Bazaar, Delhi Cantonment, New Delhi, Delhi 110010. Premier luxury wedding planner specializing in Wedding & Engagement Curation, Destination & Countryside Nuptials, Asian Wedding Architecture, Engagement & Anniversary Soirées, Bespoke Theme Celebrations & Outdoor Scenography, Baby Shower & Milestone Birthday Galas, and Wedding Banquet & Bespoke Atelier Packages."
     />
-    <meta name="keywords" content="luxury wedding planner, destination weddings india, udaipur palace wedding, jaipur royal wedding, lake como luxury wedding, bespoke scenography, the wedding dreams" />
+    <meta name="keywords" content="Wedding & Engagement Curation, Destination & Countryside Nuptials, Asian Wedding Architecture, Engagement & Anniversary Soirées, Bespoke Theme Celebrations & Outdoor Scenography, Baby Shower & Milestone Birthday Galas, Wedding Banquet & Bespoke Atelier Packages, luxury wedding planner, destination weddings india, sadar bazar delhi cantonment, the wedding dreams" />
     <meta name="author" content="The Wedding Dreams Directorship" />
     <link rel="canonical" href="https://theweddingdreams.com" />
 

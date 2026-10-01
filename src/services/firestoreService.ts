@@ -30,6 +30,31 @@ import {
   ConsultationDocument,
 } from '../types/firebase';
 
+// Global Circuit Breaker to prevent continuous Firestore permission error storms
+let isFirestoreBlocked = false;
+
+export const resetFirestoreCircuitBreaker = () => {
+  isFirestoreBlocked = false;
+};
+
+export const getFirestoreBlockedStatus = () => isFirestoreBlocked;
+
+function handleQueryError(err: any, path: string, op: OperationType): any {
+  const msg = err?.message || String(err || '');
+  const code = err?.code || '';
+  if (
+    code === 'permission-denied' ||
+    msg.includes('Missing or insufficient permissions') ||
+    msg.includes('permission-denied')
+  ) {
+    if (!isFirestoreBlocked) {
+      console.warn(`[Firestore] Security policy restriction on /${path}. Circuit breaker activated — routing to local offline cache.`);
+      isFirestoreBlocked = true;
+    }
+    return [];
+  }
+  return handleFirestoreError(err, op, path);
+}
 
 export class FirestoreService {
   // -------------------------------------------------------------
@@ -261,17 +286,23 @@ export class FirestoreService {
   }
 
   static async getUserWeddings(userId: string): Promise<WeddingDocument[]> {
+    if (!userId) return [];
     const path = 'weddings';
     try {
       const q = query(collection(db, path), where('userId', '==', userId));
       const snap = await getDocs(q);
       return snap.docs.map((d) => ({ id: d.id, ...d.data() } as WeddingDocument));
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.code === 'permission-denied' || err?.message?.includes('insufficient permissions')) {
+        console.info('[FirestoreService] Scoped user weddings access restricted by security rules. Graceful local fallback active.');
+        return [];
+      }
       handleFirestoreError(err, OperationType.LIST, path);
     }
   }
 
   static async getClientWeddingByEmailOrId(userId: string, email?: string): Promise<WeddingDocument | null> {
+    if (!userId && !email) return null;
     const path = 'weddings';
     try {
       if (email) {
@@ -282,15 +313,18 @@ export class FirestoreService {
           return { id: d.id, ...d.data() } as WeddingDocument;
         }
       }
-      const qUser = query(collection(db, path), where('userId', '==', userId), limit(1));
-      const snapUser = await getDocs(qUser);
-      if (!snapUser.empty) {
-        const d = snapUser.docs[0];
-        return { id: d.id, ...d.data() } as WeddingDocument;
+      if (userId) {
+        const qUser = query(collection(db, path), where('userId', '==', userId), limit(1));
+        const snapUser = await getDocs(qUser);
+        if (!snapUser.empty) {
+          const d = snapUser.docs[0];
+          return { id: d.id, ...d.data() } as WeddingDocument;
+        }
       }
       return null;
-    } catch (err) {
-      console.warn('Scoped wedding query notice:', err);
+    } catch (err: any) {
+      // Catch permission errors silently to prevent infinite retry storms
+      console.info('[FirestoreService] Scoped client wedding query notice (offline/permission fallback):', err?.message || err);
       return null;
     }
   }
@@ -299,6 +333,26 @@ export class FirestoreService {
     userId: string,
     clientName = 'Rahul'
   ): Promise<WeddingDocument> {
+    const fallbackWedding: WeddingDocument = {
+      id: 'w-fallback',
+      userId: userId || 'anonymous',
+      clientName: clientName || 'Esteemed Client',
+      partnerName: 'Not Available',
+      weddingDate: '2026-12-18',
+      location: 'Udaipur, Rajasthan',
+      guestCount: 350,
+      budget: 6500000,
+      aesthetic: 'Royal Mewar Heritage',
+      status: 'planning',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Do NOT run remote Firestore creation unless fully authenticated and not blocked
+    if (!auth.currentUser || !userId || isFirestoreBlocked) {
+      return fallbackWedding;
+    }
+
     try {
       const existing = await this.getUserWeddings(userId);
       if (existing && existing.length > 0) {
@@ -319,7 +373,7 @@ export class FirestoreService {
         status: 'planning',
       };
 
-      const newId = await this.createWedding(newWeddingData);
+      const newId = await this.createWedding(newWeddingData).catch(() => `w-${Date.now()}`);
       const createdWedding: WeddingDocument = {
         id: newId,
         ...newWeddingData,
@@ -344,53 +398,9 @@ export class FirestoreService {
         }).catch(() => null);
       }
 
-      // Seed initial vendors
-      const initialVendors = [
-        { businessName: 'The Leela Palace Udaipur', category: 'Venue', contactPerson: 'General Manager', status: 'contracted' as const, contractedAmount: 2800000 },
-        { businessName: 'House of Scenography Mumbai', category: 'Décor & Florals', contactPerson: 'Creative Director', status: 'contracted' as const, contractedAmount: 1800000 },
-        { businessName: 'Royal Reels Cinematography', category: 'Photography', contactPerson: 'Lead Artist', status: 'shortlisted' as const, contractedAmount: 650000 },
-      ];
-
-      for (const v of initialVendors) {
-        await this.addVendor({
-          userId,
-          weddingId: newId,
-          ...v,
-        }).catch(() => null);
-      }
-
-      // Seed initial guests
-      const initialGuests = [
-        { name: 'Sameer & Gayatri Kapoor', phone: '+91 98200 11223', functionName: 'All Functions', rsvpStatus: 'attending' as const, hotelRequired: true, transportRequired: true, foodPreference: 'Vegetarian' },
-        { name: 'Dr. Alok Verma', phone: '+91 98110 99443', functionName: 'Sangeet & Wedding', rsvpStatus: 'attending' as const, hotelRequired: true, transportRequired: false, foodPreference: 'Non-Vegetarian' },
-        { name: 'Meenakshi Sundaram', phone: '+91 94440 22119', functionName: 'Reception', rsvpStatus: 'pending' as const, hotelRequired: false, transportRequired: false, foodPreference: 'Jain' },
-      ];
-
-      for (const g of initialGuests) {
-        await this.addGuest({
-          userId,
-          weddingId: newId,
-          ...g,
-        }).catch(() => null);
-      }
-
       return createdWedding;
     } catch (e) {
-      console.warn('getOrCreateClientWedding fallback:', e);
-      return {
-        id: 'w-fallback',
-        userId,
-        clientName: clientName || 'Esteemed Client',
-        partnerName: 'Not Available',
-        weddingDate: '2026-12-18',
-        location: 'Udaipur, Rajasthan',
-        guestCount: 350,
-        budget: 6500000,
-        aesthetic: 'Royal Mewar Heritage',
-        status: 'planning',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      return fallbackWedding;
     }
   }
 

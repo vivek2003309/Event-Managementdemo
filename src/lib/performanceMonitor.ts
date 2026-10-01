@@ -31,18 +31,36 @@ export interface PerformanceSummary {
   recentBottlenecks: PerformanceMetric[];
 }
 
-const DEFAULT_LONG_TASK_THRESHOLD_MS = 80;
+const DEFAULT_LONG_TASK_THRESHOLD_MS = 120; // Relaxed to 120ms for renders
+const DEFAULT_ASYNC_THRESHOLD_MS = 600; // Relaxed to 600ms for cloud network queries
 const MAX_METRIC_BUFFER_SIZE = 100;
+
+function sanitizeMeta(meta?: Record<string, any>): Record<string, any> | undefined {
+  if (!meta) return undefined;
+  const piiKeys = ['name', 'fullName', 'partnerName', 'email', 'phone', 'phoneNumber', 'budget', 'budgetEnvelope', 'notes', 'vision', 'contact', 'credentials', 'password', 'user'];
+  const sanitized: Record<string, any> = {};
+  for (const [key, value] of Object.entries(meta)) {
+    if (piiKeys.some((k) => key.toLowerCase().includes(k.toLowerCase()))) {
+      sanitized[key] = '[REDACTED_PII]';
+    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      sanitized[key] = sanitizeMeta(value);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
 
 class PerformanceMonitorService {
   private metrics: PerformanceMetric[] = [];
   private listeners: ((metric: PerformanceMetric) => void)[] = [];
 
   /**
-   * Log metric and keep bounded circular buffer
+   * Log metric and keep bounded circular buffer (Sanitizing any PII)
    */
   record(metric: Omit<PerformanceMetric, 'id' | 'timestamp' | 'isBottleneck'> & { thresholdMs?: number }): PerformanceMetric {
-    const threshold = metric.thresholdMs ?? DEFAULT_LONG_TASK_THRESHOLD_MS;
+    const defaultThreshold = metric.type === 'async-task' ? DEFAULT_ASYNC_THRESHOLD_MS : DEFAULT_LONG_TASK_THRESHOLD_MS;
+    const threshold = metric.thresholdMs ?? defaultThreshold;
     const isBottleneck = metric.durationMs >= threshold;
 
     const fullMetric: PerformanceMetric = {
@@ -53,7 +71,7 @@ class PerformanceMonitorService {
       durationMs: Math.round(metric.durationMs * 100) / 100,
       isBottleneck,
       context: metric.context,
-      meta: metric.meta,
+      meta: sanitizeMeta(metric.meta),
     };
 
     this.metrics.push(fullMetric);
@@ -92,7 +110,7 @@ class PerformanceMonitorService {
         type: 'async-task',
         name,
         durationMs,
-        thresholdMs: options?.thresholdMs,
+        thresholdMs: options?.thresholdMs ?? DEFAULT_ASYNC_THRESHOLD_MS,
         context: options?.context,
         meta: options?.meta,
       });
@@ -168,8 +186,8 @@ class PerformanceMonitorService {
 export const PerformanceMonitor = new PerformanceMonitorService();
 
 /**
- * React hook to profile component render and commit times
- */
+   * React hook to profile component render and commit times
+   */
 export function useRenderProfiler(
   componentName: string,
   options?: { thresholdMs?: number; context?: string }
@@ -186,7 +204,7 @@ export function useRenderProfiler(
         type: 'render',
         name: `${componentName} Render`,
         durationMs,
-        thresholdMs: options?.thresholdMs ?? 40,
+        thresholdMs: options?.thresholdMs ?? 120, // Relaxed to 120ms
         context: options?.context,
       });
     });

@@ -23,8 +23,9 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           ref={ref}
           id={textareaId}
+          aria-label={props['aria-label'] || label}
           rows={rows}
-          className={`w-full bg-white text-[#252525] placeholder:text-[#9C968C] text-[14px] leading-relaxed p-3.5 rounded-[4px] border border-[#EAE5DC] transition-all duration-200 focus:outline-none focus:border-[#C6A66B] focus:ring-1 focus:ring-[#C6A66B]/50 disabled:bg-[#F6F3ED] disabled:cursor-not-allowed resize-y ${
+          className={`w-full bg-white text-[#252525] placeholder:text-[#9C968C] text-[14px] leading-relaxed p-3.5 rounded-[4px] border border-[#EAE5DC] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C5A059] focus:border-[#C5A059] disabled:bg-[#F6F3ED] disabled:cursor-not-allowed resize-y ${
             error ? 'border-[#BA1A1A] focus:border-[#BA1A1A]' : ''
           } ${className}`}
           {...props}

@@ -33,7 +33,8 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           <select
             ref={ref}
             id={selectId}
-            className={`w-full appearance-none bg-white text-[#252525] text-[14px] py-2.5 pl-3.5 pr-10 rounded-[4px] border border-[#EAE5DC] transition-all duration-200 focus:outline-none focus:border-[#C6A66B] focus:ring-1 focus:ring-[#C6A66B]/50 disabled:bg-[#F6F3ED] disabled:cursor-not-allowed cursor-pointer ${
+            aria-label={props['aria-label'] || label}
+            className={`w-full appearance-none bg-white text-[#252525] text-[14px] py-2.5 pl-3.5 pr-10 rounded-[4px] border border-[#EAE5DC] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C5A059] focus:border-[#C5A059] disabled:bg-[#F6F3ED] disabled:cursor-not-allowed cursor-pointer ${
               error ? 'border-[#BA1A1A] focus:border-[#BA1A1A]' : ''
             } ${className}`}
             {...props}

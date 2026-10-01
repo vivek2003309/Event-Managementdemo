@@ -31,7 +31,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
-            className={`w-full bg-white text-[#252525] placeholder:text-[#9C968C] text-[14px] leading-relaxed py-2.5 px-3.5 rounded-[4px] border border-[#EAE5DC] transition-all duration-200 focus:outline-none focus:border-[#C6A66B] focus:ring-1 focus:ring-[#C6A66B]/50 disabled:bg-[#F6F3ED] disabled:cursor-not-allowed ${
+            aria-label={props['aria-label'] || label}
+            className={`w-full bg-white text-[#252525] placeholder:text-[#9C968C] text-[14px] leading-relaxed py-2.5 px-3.5 rounded-[4px] border border-[#EAE5DC] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C5A059] focus:border-[#C5A059] disabled:bg-[#F6F3ED] disabled:cursor-not-allowed ${
               leftIcon ? 'pl-9' : ''
             } ${rightIcon ? 'pr-9' : ''} ${
               error ? 'border-[#BA1A1A] focus:border-[#BA1A1A] focus:ring-[#BA1A1A]/30' : ''

@@ -18,7 +18,7 @@ export default defineConfig(() => {
       port: 3000,
       host: '0.0.0.0',
       strictPort: true,
-      hmr: process.env.DISABLE_HMR === 'true'
+      hmr: process.env.NODE_ENV === 'production' || process.env.DISABLE_HMR === 'true'
         ? false
         : {
             protocol: 'wss',

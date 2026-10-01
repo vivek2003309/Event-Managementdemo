@@ -5,6 +5,7 @@ import { Input } from '../ui/Input';
 import { useToast } from '../ui/Toast';
 import { FirestoreService } from '../../services/firestoreService';
 import { useAtelierData } from '../../context/AtelierDataContext';
+import { SPECIALIZED_ATELIER_SERVICES } from '../../data/services';
 import { db } from '../../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { CheckCircle2, Calendar, MapPin, Sparkles } from 'lucide-react';
@@ -19,6 +20,7 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, on
   const { addLead } = useAtelierData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -29,6 +31,7 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, on
     destination: 'Udaipur, Rajasthan',
     guestCount: '300',
     budgetEnvelope: '₹1 Cr – ₹3 Cr',
+    selectedService: SPECIALIZED_ATELIER_SERVICES[0],
     vision: '',
   });
 
@@ -91,6 +94,7 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, on
       budgetEnvelope: formData.budgetEnvelope,
       notes: formData.vision,
       vision: formData.vision,
+      services: [formData.selectedService, 'Directorial Curation'],
       source: "Let's Talk Consultation Modal",
     };
 
@@ -141,6 +145,7 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, on
 
   const handleReset = () => {
     setIsSubmitted(false);
+    setConsentChecked(false);
     setFormData({
       fullName: '',
       partnerName: '',
@@ -150,6 +155,7 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, on
       destination: 'Udaipur, Rajasthan',
       guestCount: '300',
       budgetEnvelope: '₹1 Cr – ₹3 Cr',
+      selectedService: SPECIALIZED_ATELIER_SERVICES[0],
       vision: '',
     });
     setErrors({});
@@ -278,6 +284,23 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, on
             />
           </div>
 
+          {/* Service Discipline Selector */}
+          <div>
+            <label className="block text-[10px] tracking-[0.2em] uppercase text-[#8C827A] font-semibold mb-2">
+              Primary Service Discipline *
+            </label>
+            <select
+              name="selectedService"
+              value={formData.selectedService}
+              onChange={handleChange}
+              className="w-full bg-[#F5F2EB] border border-[#E5DFD3] px-4 py-3 text-xs tracking-wider text-[#1A1A1A] focus:outline-none focus:border-[#C5A059] rounded-none transition-colors"
+            >
+              {SPECIALIZED_ATELIER_SERVICES.map((srv) => (
+                <option key={srv} value={srv}>{srv}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Row 3: Destination & Celebration Date Selector */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -377,12 +400,41 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, on
             />
           </div>
 
+          {/* DPDP Compliance Checkbox */}
+          <div className="p-3 bg-[#FAF8F5] border border-[#E5DFD3] rounded-[4px] flex items-start gap-3 text-[12px] text-[#55524E]">
+            <input
+              type="checkbox"
+              id="dpdp-consent-modal"
+              checked={consentChecked}
+              onChange={(e) => setConsentChecked(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-[#E5DFD3] text-[#C5A059] focus:ring-[#C5A059] cursor-pointer shrink-0"
+            />
+            <label htmlFor="dpdp-consent-modal" className="leading-snug cursor-pointer select-none">
+              I consent to The Wedding Dreams processing my submitted contact coordinates for event curation and directorial consultations in accordance with the{' '}
+              <a
+                href="/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#C5A059] underline font-medium hover:text-[#171717] transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Privacy Policy
+              </a>.
+            </label>
+          </div>
+
           {/* Actions */}
           <div className="pt-2 flex items-center justify-end gap-3">
             <Button variant="outline" size="md" onClick={onClose} type="button">
               Cancel
             </Button>
-            <Button variant="accent" size="md" type="submit" isLoading={isSubmitting}>
+            <Button
+              variant="accent"
+              size="md"
+              type="submit"
+              isLoading={isSubmitting}
+              disabled={!consentChecked || isSubmitting}
+            >
               Request Private Consultation
             </Button>
           </div>

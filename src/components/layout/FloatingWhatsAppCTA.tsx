@@ -13,9 +13,9 @@ import { X, ArrowRight } from 'lucide-react';
 
 export const FloatingWhatsAppCTA: React.FC = () => {
   const [showTooltip, setShowTooltip] = useState(false);
-  const phoneNumber = '919820048210';
+  const phoneNumber = '919871211995';
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
-    'Namaste. I would like to inquire about wedding planning with The Wedding Dreams.'
+    'Hello The Wedding Dreams, I would like to inquire about your bespoke event planning services.'
   )}`;
 
   return (
@@ -50,11 +50,11 @@ export const FloatingWhatsAppCTA: React.FC = () => {
               Connect directly with our curatorial directors for palace availability, guest logistics, and private proposals.
             </p>
             <div className="mt-3 pt-2.5 flex items-center justify-between text-[11px] text-[#C6A66B]">
-              <span>Direct: +91 (0) 98200 48210</span>
+              <span>Direct: +91 98712 11995</span>
               <a
                 href={whatsappUrl}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 font-medium hover:underline text-white"
               >
                 Chat Now <ArrowRight className="w-3 h-3 text-[#C6A66B]" />

@@ -1,0 +1,23 @@
+# The Wedding Dreams by Varun Rathor - Development Rules & Guidelines
+
+## 1. Tech Stack Architecture
+- **Frontend Framework**: React 18 + TypeScript + Vite.
+- **Styling Engine**: Tailwind CSS with custom editorial extensions.
+- **Database & Auth**: Firebase Firestore (real-time `onSnapshot` sync) and Firebase Authentication.
+- **PDF Export Engine**: Native vector `jsPDF` only (strictly no `html2canvas` or `jsPDF-AutoTable` dependencies).
+- **Data Visualization**: Recharts for milestone trend analysis.
+
+## 2. Core Operational Rules
+1. **Firebase Preservation**:
+   - Never alter Firebase Authentication flows or change collection schemas (`managed_weddings`, `crm_leads`, `inquiries`) without explicit user instruction.
+2. **URL Integrity**:
+   - Strictly avoid outputting development or preview URLs (e.g. `ais-dev.run.app`, `localhost`) in client-facing documents, emails, or PDF exports.
+   - Official Production Domain: `https://event-managementdemo.vercel.app/`.
+3. **Data Protection & DPDP Act 2023 Compliance**:
+   - Adhere strictly to India's DPDP Act 2023 (data minimization, explicit opt-in consent checkboxes).
+   - Zero PII leakage: Ensure no client names, emails, phones, or budget numbers are logged to the browser console or third-party analytics.
+4. **Luxury Atelier Visual Discipline**:
+   - Maintain the signature palette: `#C5A059` (Atelier Gold), `#171717` (Deep Charcoal/Noir), `#F8F5EF` (Warm Alabaster).
+   - Editorial typography: Playfair Display / Cormorant Garamond style serif headings paired with clean, geometric sans-serif body copy.
+5. **React Hook Safety**:
+   - Never place conditional early returns (`if (...) return;`) above React hook declarations (`useState`, `useEffect`, `useMemo`, `useCallback`, `useContext`).

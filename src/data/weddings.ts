@@ -47,7 +47,7 @@ export const WEDDINGS_DATA: Wedding[] = [
       text: '“Every moment felt elevated yet profoundly intimate. Our guests are still talking about the boat arrival at dusk.”',
       author: 'Riya & Aman Mehta',
     },
-    pressFeatures: ['Featured in Vogue Weddings', 'Architectural Digest India'],
+    pressFeatures: ['Heritage Spatial Design', 'Palace Lighting Architecture'],
   },
   {
     id: 'kabir-ananya-goa',
@@ -225,7 +225,7 @@ export const WEDDINGS_DATA: Wedding[] = [
       'Crystal Chandelier Rigging',
       'Artisan Sommelier & Caviar Bar',
       'Big Band Jazz Orchestra Direction',
-      'Vogue Editorial Still Photography',
+      'Fine Art Still Photography',
     ],
     eventType: 'Grand Reception',
     category: 'Reception',
@@ -234,7 +234,7 @@ export const WEDDINGS_DATA: Wedding[] = [
       text: '“Stepping into that ballroom felt like entering an imperial dream. Truly transcendent.”',
       author: 'Sameer & Natasha Varma',
     },
-    pressFeatures: ['Featured in Vogue Weddings'],
+    pressFeatures: ['Grand Ballroom Architecture'],
   },
   {
     id: 'dev-priyanka-udaipur',
