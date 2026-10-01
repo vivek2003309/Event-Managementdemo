@@ -119,3 +119,50 @@ img, video {
   height: auto;
 }
 
+@keyframes heroSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(45px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroBgZoom {
+  0% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* When preloader exits, body gets .preloader-finished or .preloader-done */
+body.preloader-finished .hero-eyebrow,
+body.preloader-done .hero-eyebrow {
+  animation: heroSlideUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both !important;
+}
+body.preloader-finished .hero-title,
+body.preloader-done .hero-title {
+  animation: heroSlideUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both !important;
+}
+body.preloader-finished .hero-desc,
+body.preloader-done .hero-desc {
+  animation: heroSlideUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both !important;
+}
+body.preloader-finished .hero-actions,
+body.preloader-done .hero-actions {
+  animation: heroSlideUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.65s both !important;
+}
+body.preloader-finished .hero-metrics,
+body.preloader-done .hero-metrics {
+  animation: heroSlideUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.85s both !important;
+}
+body.preloader-finished .hero-bg-img,
+body.preloader-done .hero-bg-img {
+  animation: heroBgZoom 2s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+
+

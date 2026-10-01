@@ -10,6 +10,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from '../../lib/router';
 import { ArrowRight, ArrowDown } from 'lucide-react';
+import { useAnimation } from '../../context/AnimationContext';
 
 export interface HeroProps {
   onOpenLetTalk?: () => void;
@@ -23,27 +24,60 @@ export const Hero: React.FC<HeroProps> = ({
   preloaderComplete,
 }) => {
   const { navigate } = useRouter();
+  const { introCompleted } = useAnimation();
 
-  // Active entrance animation state - defaults to true so hero content is immediately visible
-  const [isRevealed, setIsRevealed] = useState<boolean>(true);
+  // Active entrance animation state
+  const [isHeroReady, setIsHeroReady] = useState<boolean>(() => {
+    if (document.body.classList.contains('preloader-done') || document.body.classList.contains('preloader-finished') || preloaderComplete || isHeroRevealed || introCompleted) {
+      return true;
+    }
+    try {
+      if (sessionStorage.getItem('hasSeenPreloader')) return true;
+    } catch (e) {}
+    return false;
+  });
 
   useEffect(() => {
-    const handleComplete = () => {
-      setIsRevealed(true);
-    };
-
-    window.addEventListener('preloaderFinished', handleComplete);
-    window.addEventListener('atelier-preloader-exit', handleComplete);
-
-    if (preloaderComplete || isHeroRevealed) {
-      handleComplete();
+    if (document.body.classList.contains('preloader-done') || document.body.classList.contains('preloader-finished') || preloaderComplete || isHeroRevealed || introCompleted) {
+      setIsHeroReady(true);
+      return;
     }
 
+    // Check if preloader is already gone
+    const preloaderEl = document.querySelector('[class*="preloader"], [id*="preloader"]');
+    if (!preloaderEl) {
+      setIsHeroReady(true);
+      return;
+    }
+
+    // Fallback timer synced with preloader duration (2.2s)
+    const timer = setTimeout(() => {
+      setIsHeroReady(true);
+    }, 2200);
+
+    // Watch if preloader gets removed or hidden
+    const observer = new MutationObserver(() => {
+      const activePreloader = document.querySelector('[class*="preloader"], [id*="preloader"]');
+      if (!activePreloader || activePreloader.classList.contains('hidden') || activePreloader.getAttribute('aria-hidden') === 'true') {
+        setIsHeroReady(true);
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+
+    const handleFinished = () => setIsHeroReady(true);
+    window.addEventListener('preloader-finished', handleFinished);
+    window.addEventListener('preloaderFinished', handleFinished);
+    window.addEventListener('atelier-preloader-exit', handleFinished);
+
     return () => {
-      window.removeEventListener('preloaderFinished', handleComplete);
-      window.removeEventListener('atelier-preloader-exit', handleComplete);
+      clearTimeout(timer);
+      observer.disconnect();
+      window.removeEventListener('preloader-finished', handleFinished);
+      window.removeEventListener('preloaderFinished', handleFinished);
+      window.removeEventListener('atelier-preloader-exit', handleFinished);
     };
-  }, [preloaderComplete, isHeroRevealed]);
+  }, [preloaderComplete, isHeroRevealed, introCompleted]);
 
   const handleExploreScroll = () => {
     const el = document.getElementById('brand-story') || document.getElementById('our-work-section');
@@ -72,7 +106,7 @@ export const Hero: React.FC<HeroProps> = ({
 
   return (
     <section className="relative w-full h-screen min-h-[100svh] max-h-[100vh] overflow-hidden flex flex-col justify-between bg-black">
-      {/* 1. Full-screen background local video with full-height/width cover */}
+      {/* 1. Full-screen background local video with direct inline scale transition */}
       <video
         ref={videoRef}
         autoPlay
@@ -80,8 +114,13 @@ export const Hero: React.FC<HeroProps> = ({
         muted
         playsInline
         preload="metadata"
-        className="absolute inset-0 w-full h-full object-cover object-center z-0 pointer-events-none"
-        style={{ minHeight: '100%', minWidth: '100%' }}
+        className="hero-bg-img absolute inset-0 w-full h-full object-cover object-center z-0 pointer-events-none"
+        style={{
+          transform: isHeroReady ? 'scale(1)' : 'scale(1.12)',
+          transition: 'transform 2s cubic-bezier(0.16, 1, 0.3, 1)',
+          minHeight: '100%',
+          minWidth: '100%',
+        }}
       >
         <source src="/videos/hero-bg.mp4" type="video/mp4" />
       </video>
@@ -93,11 +132,14 @@ export const Hero: React.FC<HeroProps> = ({
       <div className="relative z-20 w-full h-full flex flex-col justify-between items-center px-4 sm:px-6 pt-20 sm:pt-24 pb-4 sm:pb-6 text-center max-w-5xl mx-auto">
         {/* Top/Center Content Group */}
         <div className="w-full max-w-3xl mx-auto flex-1 flex flex-col justify-center items-center my-auto">
-          {/* Badge: text-[10px] md:text-xs py-1 px-3 mb-2 tracking-[0.2em] */}
+          {/* Eyebrow / Tagline */}
           <div
-            className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 mb-2 rounded-[4px] bg-black/50 backdrop-blur-md border border-white/20 shadow-[0_4px_24px_rgba(0,0,0,0.6)] transition-all duration-700 ease-out transform ${
-              isRevealed ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8'
-            }`}
+            className="hero-eyebrow inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 mb-2 rounded-[4px] bg-black/50 backdrop-blur-md border border-white/20 shadow-[0_4px_24px_rgba(0,0,0,0.6)]"
+            style={{
+              opacity: isHeroReady ? 1 : 0,
+              transform: isHeroReady ? 'translateY(0px)' : 'translateY(35px)',
+              transition: 'all 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.1s',
+            }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] animate-pulse" />
             <span className="text-[#C5A059] tracking-[0.2em] text-[10px] md:text-xs uppercase font-medium drop-shadow-xs">
@@ -106,12 +148,15 @@ export const Hero: React.FC<HeroProps> = ({
             <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] animate-pulse" />
           </div>
 
-          {/* Headline: text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif mb-2 leading-tight */}
+          {/* Main Serif Headline */}
           <h1
-            className={`text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif text-white mb-2 leading-tight tracking-tight drop-shadow-[0_6px_32px_rgba(0,0,0,0.9)] text-balance transition-all duration-1000 delay-150 ease-out transform ${
-              isRevealed ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'
-            }`}
-            style={{ fontFamily: "'Cormorant Garamond', 'Playfair Display', Georgia, serif" }}
+            className="hero-title text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif text-white mb-2 leading-tight tracking-tight drop-shadow-[0_6px_32px_rgba(0,0,0,0.9)] text-balance"
+            style={{
+              opacity: isHeroReady ? 1 : 0,
+              transform: isHeroReady ? 'translateY(0px)' : 'translateY(45px)',
+              transition: 'all 1s cubic-bezier(0.16, 1, 0.3, 1) 0.25s',
+              fontFamily: "'Cormorant Garamond', 'Playfair Display', Georgia, serif",
+            }}
           >
             Your Story.{' '}
             <span className="italic font-light text-[#F8F5EF] block sm:inline">
@@ -119,21 +164,27 @@ export const Hero: React.FC<HeroProps> = ({
             </span>
           </h1>
 
-          {/* Subtext paragraph: text-xs md:text-sm line-clamp-2 md:line-clamp-none max-w-lg mx-auto mb-4 text-stone-300 */}
+          {/* Subtitle / Description Paragraph */}
           <p
-            className={`text-xs md:text-sm text-stone-300 max-w-lg mx-auto mb-4 font-light leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)] line-clamp-2 md:line-clamp-none transition-all duration-700 delay-300 ease-out transform ${
-              isRevealed ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-6'
-            }`}
+            className="hero-desc text-xs md:text-sm text-stone-300 max-w-lg mx-auto mb-4 font-light leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)] line-clamp-2 md:line-clamp-none"
+            style={{
+              opacity: isHeroReady ? 1 : 0,
+              transform: isHeroReady ? 'translateY(0px)' : 'translateY(35px)',
+              transition: 'all 1s cubic-bezier(0.16, 1, 0.3, 1) 0.45s',
+            }}
           >
             From intimate celebrations to grand destination weddings, we design and manage
             unforgettable experiences around your story.
           </p>
 
-          {/* CTA Buttons: compact on mobile (py-2.5 px-5 text-xs sm:text-sm flex-row gap-3) */}
+          {/* Action Buttons */}
           <div
-            className={`flex flex-row gap-3 items-center justify-center transition-all duration-700 delay-300 ease-out transform ${
-              isRevealed ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-6'
-            }`}
+            className="hero-actions flex flex-row gap-3 items-center justify-center"
+            style={{
+              opacity: isHeroReady ? 1 : 0,
+              transform: isHeroReady ? 'translateY(0px)' : 'translateY(30px)',
+              transition: 'all 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.65s',
+            }}
           >
             <button
               type="button"
@@ -161,11 +212,14 @@ export const Hero: React.FC<HeroProps> = ({
           </div>
         </div>
 
-        {/* Bottom Stats: py-2 px-3 text-xs w-full max-w-xl mx-auto */}
+        {/* Metric Bar / Bottom Counters */}
         <div
-          className={`w-full max-w-xl flex flex-col items-center gap-2 mt-auto transform origin-bottom transition-all duration-700 delay-500 ease-out ${
-            isRevealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-          }`}
+          className="hero-metrics w-full max-w-xl flex flex-col items-center gap-2 mt-auto transform origin-bottom"
+          style={{
+            opacity: isHeroReady ? 1 : 0,
+            transform: isHeroReady ? 'translateY(0px)' : 'translateY(25px)',
+            transition: 'all 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.85s',
+          }}
         >
           <div className="w-full bg-black/65 backdrop-blur-md rounded-[8px] py-2 px-3 border border-[#C5A059]/35 shadow-[0_8px_32px_rgba(0,0,0,0.65)] grid grid-cols-3 gap-2 text-center text-xs">
             <div className="flex flex-col items-center justify-center">

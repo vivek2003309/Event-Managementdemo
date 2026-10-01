@@ -37,6 +37,7 @@ import { CookiePolicyPage } from './pages/CookiePolicyPage';
 import { CookieBanner } from './components/common/CookieBanner';
 import { AuthProvider } from './context/AuthContext';
 import { AtelierDataProvider } from './context/AtelierDataContext';
+import { AnimationProvider } from './context/AnimationContext';
 
 function AppContent() {
   const { path } = useRouter();
@@ -176,9 +177,11 @@ export default function App() {
       <ToastProvider>
         <AuthProvider>
           <AtelierDataProvider>
-            <RouterProvider>
-              <AppContent />
-            </RouterProvider>
+            <AnimationProvider>
+              <RouterProvider>
+                <AppContent />
+              </RouterProvider>
+            </AnimationProvider>
           </AtelierDataProvider>
         </AuthProvider>
       </ToastProvider>

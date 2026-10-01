@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useAnimation } from '../../context/AnimationContext';
 
 const MONTAGE_IMAGES = [
   'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=85', // Grand royal palace / venue
@@ -27,6 +28,7 @@ export const LuxuryEditorialPreloader: React.FC<LuxuryEditorialPreloaderProps> =
   onComplete,
   forceShow = false,
 }) => {
+  const { setIntroCompleted } = useAnimation();
   const [progress, setProgress] = useState(0);
   const [imageIndex, setImageIndex] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
@@ -89,6 +91,14 @@ export const LuxuryEditorialPreloader: React.FC<LuxuryEditorialPreloaderProps> =
       const img = new Image();
       img.src = src;
     });
+
+    // Fail-safe timer
+    const failsafeTimer = setTimeout(() => {
+      document.body.classList.add('preloader-finished');
+      document.body.classList.add('preloader-done');
+    }, 2200);
+
+    return () => clearTimeout(failsafeTimer);
   }, []);
 
   // Listen for Replay requests from footer or anywhere in app
@@ -126,8 +136,9 @@ export const LuxuryEditorialPreloader: React.FC<LuxuryEditorialPreloaderProps> =
         exitTriggeredRef.current = true;
         clearInterval(progressTimer);
 
-        // Signal hero section to trigger its inverse reveal simultaneously with preloader lift
-        window.dispatchEvent(new CustomEvent('preloaderFinished'));
+        document.body.classList.add('preloader-done');
+        document.body.classList.add('preloader-finished');
+        window.dispatchEvent(new CustomEvent('preloader-finished'));
         window.dispatchEvent(new CustomEvent('atelier-preloader-exit'));
 
         // Begin smooth 700ms slide/fade upward curtain transition
@@ -138,6 +149,10 @@ export const LuxuryEditorialPreloader: React.FC<LuxuryEditorialPreloaderProps> =
             sessionStorage.setItem('hasSeenPreloader', 'true');
           } catch (e) {}
           setIsFinished(true);
+          setIntroCompleted(true);
+          document.body.classList.add('preloader-done');
+          document.body.classList.add('preloader-finished');
+          window.dispatchEvent(new CustomEvent('preloader-finished'));
           window.dispatchEvent(new CustomEvent('preloaderFinished'));
           if (onComplete) onComplete();
         }, 700); // 700ms exit curtain animation
@@ -153,14 +168,16 @@ export const LuxuryEditorialPreloader: React.FC<LuxuryEditorialPreloaderProps> =
       clearInterval(progressTimer);
       clearInterval(imageTimer);
     };
-  }, [isFinished, onComplete]);
+  }, [isFinished, onComplete, setIntroCompleted]);
 
   const handleSkip = () => {
     if (exitTriggeredRef.current) return;
     exitTriggeredRef.current = true;
 
     setProgress(100);
-    window.dispatchEvent(new CustomEvent('preloaderFinished'));
+    document.body.classList.add('preloader-done');
+    document.body.classList.add('preloader-finished');
+    window.dispatchEvent(new CustomEvent('preloader-finished'));
     window.dispatchEvent(new CustomEvent('atelier-preloader-exit'));
     setIsExiting(true);
 
@@ -169,6 +186,10 @@ export const LuxuryEditorialPreloader: React.FC<LuxuryEditorialPreloaderProps> =
         sessionStorage.setItem('hasSeenPreloader', 'true');
       } catch (e) {}
       setIsFinished(true);
+      setIntroCompleted(true);
+      document.body.classList.add('preloader-done');
+      document.body.classList.add('preloader-finished');
+      window.dispatchEvent(new CustomEvent('preloader-finished'));
       window.dispatchEvent(new CustomEvent('preloaderFinished'));
       if (onComplete) onComplete();
     }, 700);

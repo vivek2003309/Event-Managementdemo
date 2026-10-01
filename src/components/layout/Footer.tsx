@@ -187,19 +187,6 @@ export const Footer: React.FC = () => {
             <span>
               Copyright &copy; 2025 The Wedding Dreams. All Rights Reserved.
             </span>
-            <button
-              type="button"
-              onClick={() => {
-                try {
-                  sessionStorage.removeItem('hasSeenPreloader');
-                } catch (e) {}
-                window.dispatchEvent(new CustomEvent('replay-atelier-preloader'));
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="text-[#C6A66B] hover:text-white transition-colors cursor-pointer text-[10px] uppercase tracking-[0.2em] underline underline-offset-4"
-            >
-              ↺ Replay Preloader Experience
-            </button>
           </div>
           <div className="relative z-20 flex flex-wrap items-center justify-center md:justify-end gap-x-4 gap-y-2 text-[11px] text-[#F8F5EF]/70 px-4 sm:px-12 md:px-28">
             <Link href="/privacy-policy" className="cursor-pointer hover:text-[#C6A66B] transition-colors">

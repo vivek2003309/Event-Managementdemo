@@ -1,5 +1,7 @@
 {
-  "name": "react-example",
+  "name": "the-wedding-dreams-core",
+  "description": "Bespoke Scenography & Destination Nuptials Management Platform",
+  "author": "The Wedding Dreams Atelier Engineering",
   "private": true,
   "version": "0.0.0",
   "type": "module",
