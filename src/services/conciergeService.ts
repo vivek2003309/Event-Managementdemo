@@ -116,6 +116,9 @@ export class ConciergeService {
       content: m.content,
     }));
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     try {
       const response = await fetch('/api/concierge/chat', {
         method: 'POST',
@@ -126,7 +129,10 @@ export class ConciergeService {
           messages: formatted,
           leadData,
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
@@ -135,12 +141,16 @@ export class ConciergeService {
 
       const data = await response.json();
       return {
-        reply: data.reply,
+        reply: data.reply || "Namaste. How may I assist you with your destination wedding curation today?",
         offerExpert: Boolean(data.offerExpert),
       };
     } catch (error: any) {
-      console.error('ConciergeService.sendMessage error:', error);
-      throw error;
+      clearTimeout(timeoutId);
+      console.warn('ConciergeService.sendMessage fallback:', error?.message || error);
+      return {
+        reply: "Namaste. Our curatorial concierge desk is currently prioritizing active wedding consultations. Please connect directly with our Directors via the WhatsApp Atelier desk below, or tap 'Connect with Expert'.",
+        offerExpert: true,
+      };
     }
   }
 

@@ -66,10 +66,109 @@ CRITICAL BOUNDARIES & ACCURACY RULES:
 - Help collect or confirm lead details gracefully: Name, Phone, Email, Wedding Date, Location, Guest Count, and Budget.
 `;
 
+// Helper: Decoupled Asynchronous Lead Extraction
+async function extractLeadDossierAsync(messages: Array<{ role: string; content: string }>) {
+  if (!Array.isArray(messages) || messages.length < 2) return null;
+
+  const conversationTranscript = messages
+    .map((m: { role: string; content: string }) => `${m.role.toUpperCase()}: ${m.content}`)
+    .join('\n');
+
+  // Fast heuristic regex extraction fallback
+  const phoneMatch = conversationTranscript.match(/(?:\+91|0)?[6-9]\d{9}/);
+  const emailMatch = conversationTranscript.match(/[\w.-]+@[\w.-]+\.\w+/);
+  const guestMatch = conversationTranscript.match(/(\d{2,4})\s*(?:guests|people|pax)/i);
+  const budgetMatch = conversationTranscript.match(/(?:₹?\s*\d+(?:[.–]\d+)?\s*(?:lakhs?|lac|cr|crores?))/i);
+  const locationMatch = conversationTranscript.match(/(udaipur|jaipur|goa|delhi|mumbai|kerala)/i);
+
+  const fallbackLead = {
+    name: null,
+    phone: phoneMatch ? phoneMatch[0] : null,
+    email: emailMatch ? emailMatch[0] : null,
+    weddingDate: null,
+    location: locationMatch ? locationMatch[0] : null,
+    guestCount: guestMatch ? parseInt(guestMatch[1], 10) : null,
+    budget: budgetMatch ? budgetMatch[0] : null,
+    intentScore: phoneMatch || emailMatch ? 'high' : 'medium',
+    summary: 'Enquiry details identified from conversation context.',
+  };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+  try {
+    const prompt = `
+Analyze the conversation between a client and The Wedding Dreams AI Concierge.
+Extract all wedding parameters and contact details mentioned by the client. If not mentioned, set to null.
+
+Conversation:
+${conversationTranscript}
+
+Return ONLY valid JSON matching this schema:
+{
+  "name": string or null,
+  "phone": string or null,
+  "email": string or null,
+  "weddingDate": string or null,
+  "location": string or null,
+  "guestCount": number or null,
+  "budget": string or null,
+  "intentScore": "high" | "medium" | "low",
+  "summary": string
+}
+`;
+
+    const response = await Promise.race([
+      ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: 'application/json',
+          abortSignal: controller.signal,
+        },
+      }),
+      new Promise<never>((_, reject) => {
+        controller.signal.addEventListener('abort', () =>
+          reject(new Error('AbortError: Lead extraction timed out'))
+        );
+      }),
+    ]);
+
+    clearTimeout(timeoutId);
+    if (response && response.text) {
+      return JSON.parse(response.text.trim());
+    }
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    // Silent fallback to regex heuristics
+  }
+
+  return fallbackLead;
+}
+
 // 1. AI Concierge Chat Endpoint
 app.post('/api/concierge/chat', async (req, res) => {
   try {
-    const { messages, leadData } = req.body;
+    const { messages, message, leadData } = req.body;
+
+    // Detect user's current message string
+    const rawMessage = typeof message === 'string'
+      ? message
+      : Array.isArray(messages) && messages.length > 0
+        ? messages[messages.length - 1].content || ''
+        : '';
+
+    const cleanMsg = (rawMessage || '').trim().toLowerCase();
+    const greetings = ['hi', 'hey', 'hello', 'namaste', 'hola', 'good morning', 'good evening', 'test'];
+
+    // 2. Instant Smart Greeting Bypass (Sub-100ms Response)
+    if (greetings.includes(cleanMsg) || (cleanMsg.length > 0 && cleanMsg.length <= 4)) {
+      return res.status(200).json({
+        reply: "Namaste! Welcome to The Wedding Dreams Atelier. How may I assist you with your destination curation, venue selection, or wedding timeline today?",
+        status: "success",
+        offerExpert: false,
+      });
+    }
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'Messages array is required.' });
@@ -87,84 +186,74 @@ app.post('/api/concierge/chat', async (req, res) => {
       contextualInstruction += `\n\nKnown Lead Context for this client:\n${JSON.stringify(leadData, null, 2)}`;
     }
 
-    const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
     let replyText = '';
-    let apiError: any = null;
 
-    for (const model of candidateModels) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
+    // 1. Model Configuration & Timeout Hardening:
+    // Retain gemini-3.8-flash as primary, wrapped with explicit 4-second AbortController signal.
+    // Do NOT attempt infinite retry loops on 503 errors.
+    const controller = new AbortController();
+    const timeoutTimer = setTimeout(() => {
+      controller.abort();
+    }, 4000);
+
+    try {
+      const response = await Promise.race([
+        ai.models.generateContent({
+          model: 'gemini-3.8-flash',
           contents,
           config: {
             systemInstruction: contextualInstruction,
             temperature: 0.7,
+            abortSignal: controller.signal,
           },
-        });
-        if (response.text) {
-          replyText = response.text;
-          break;
-        }
-      } catch (err: any) {
-        apiError = err;
-        console.warn(`Model ${model} request failed, attempting next fallback:`, err?.message || err);
+        }),
+        new Promise<never>((_, reject) => {
+          controller.signal.addEventListener('abort', () =>
+            reject(new Error('AbortError: Request timed out after 4 seconds'))
+          );
+        }),
+      ]);
+
+      clearTimeout(timeoutTimer);
+      if (response && response.text) {
+        replyText = response.text.trim();
       }
+    } catch (modelErr: any) {
+      clearTimeout(timeoutTimer);
+      console.warn('gemini-3.8-flash request error or timeout:', modelErr?.message || modelErr);
     }
 
-    // If upstream Google API has transient 503/429 spikes, fallback gracefully to domain curatorial response
+    // 4. Instant Client-Safe Fallback:
+    // If gemini-3.8-flash returns a 503, 429, or AbortError:
+    // Catch immediately and return HTTP 200 with an atelier fallback response
     if (!replyText) {
-      const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')?.content?.toLowerCase() || '';
-      if (lastUserMsg.includes('destination') || lastUserMsg.includes('udaipur') || lastUserMsg.includes('jaipur') || lastUserMsg.includes('goa')) {
-        replyText = `Namaste. For destination celebrations, The Wedding Dreams specializes in four quintessential enclaves:
-
-1. **Udaipur (Lake Pichola)**: World-renowned for island palaces like Taj Lake Palace and Jagmandir Island, offering royal flotilla arrivals and serene water reflections.
-2. **Jaipur (The Pink City)**: Majestic fortresses and palatial gardens such as Rambagh Palace and Jai Mahal for torch-lit baithaks and royal elephant processions.
-3. **Goa (Coastal Luxury)**: Secluded cliffside estates in Cabo Serai or South Goa beach resorts for bohemian sundowners and ocean-facing Vedic pheras.
-4. **Delhi NCR**: Grand farmhouses and Lutyens lawns for monumental gatherings requiring large guest capacities.
-
-Would you like to connect with a Wedding Expert to discuss dates and palace availability for your preferred enclave?`;
-      } else if (lastUserMsg.includes('budget') || lastUserMsg.includes('cost') || lastUserMsg.includes('pricing')) {
-        replyText = `Namaste. While exact costings depend on your chosen dates, venue contracts, and artist specifications, our standard indicative allocation framework is structured as follows:
-
-• **Venue & Palace Charter**: ~25%
-• **Catering & Mixology**: ~20%
-• **Décor & Floral Scenography**: ~20%
-• **Photography & 35mm Cinema**: ~10%
-• **Entertainment & Headline Artists**: ~8%
-• **Hospitality & Guest Concierge**: ~7%
-• **Contingency Buffer & Logistics**: ~10%
-
-You can also use our interactive /budget-planner to model your exact headcount. Would you like to connect with a Wedding Expert for a tailored line-item estimate?`;
-      } else if (lastUserMsg.includes('timeline') || lastUserMsg.includes('schedule') || lastUserMsg.includes('month') || lastUserMsg.includes('when')) {
-        replyText = `Namaste. For high-demand destination weddings, our directors recommend the following master planning timeline:
-
-• **9–14 Months Out**: Secure heritage venue charter and lock 100% room inventory.
-• **6–8 Months Out**: Finalize creative scenography themes, 3D spatial renders, and headline artists.
-• **4–6 Months Out**: Private menu tastings, master mixology curation, and ritual coordination.
-• **2–3 Months Out**: Deploy guest digital RSVPs, flight logistics, and airport concierge desks.
-• **Wedding Week**: Full directorship takeover, sound clearances, and bridal shadow assistance.
-
-Would you like to connect with a Wedding Expert to map your custom dates?`;
-      } else {
-        replyText = `Namaste. The Wedding Dreams orchestrates bespoke celebrations across six core directorships: Planning & Management, Décor & Scenography, Destination Takeovers, Royal Gastronomy, Curated Entertainment, and 35mm Cinematic Films.
-
-How may I assist you with your destination, ceremonial timeline, or indicative budget? Would you like to connect with a Wedding Expert?`;
-      }
+      replyText = "Namaste. Our curatorial concierge desk is currently prioritizing active wedding consultations. Please connect directly with our Directors via the WhatsApp Atelier desk below, or tap 'Connect with Expert'.";
     }
 
-    // Detect purchase intent in the conversation to signal UI to highlight the lead capture/connect action
     const lowerText = replyText.toLowerCase();
-    const hasIntentOffer = lowerText.includes('connect with a wedding expert') || lowerText.includes('talk to a wedding expert');
+    const hasIntentOffer = lowerText.includes('connect with a wedding expert') ||
+                           lowerText.includes('talk to a wedding expert') ||
+                           lowerText.includes('connect with expert');
 
-    res.json({
+    // 3. Decouple Lead Extraction (Do Not Block Chat Flow):
+    // Send user reply immediately
+    res.status(200).json({
       reply: replyText,
+      status: "success",
       offerExpert: hasIntentOffer,
     });
+
+    // Execute lead extraction asynchronously without awaiting in HTTP cycle
+    extractLeadDossierAsync(messages).catch((err) =>
+      console.error("Lead extraction failed silently:", err)
+    );
   } catch (error: any) {
-    console.error('Gemini Concierge Chat error:', error);
-    res.status(500).json({
-      error: error?.message || 'Unable to consult the AI Wedding Concierge. Please retry.',
-      reply: 'Namaste. Our curatorial concierge system is momentarily experiencing high demand. Please retry or click "Talk to an Expert" to speak directly with our directors.',
+    console.error('Concierge Chat general error:', error);
+    // Instant Client-Safe Fallback - Never throw unhandled 500
+    res.status(200).json({
+      reply: "Namaste. Our curatorial concierge desk is currently prioritizing active wedding consultations. Please connect directly with our Directors via the WhatsApp Atelier desk below, or tap 'Connect with Expert'.",
+      status: "success",
+      offerExpert: true,
     });
   }
 });
@@ -173,94 +262,14 @@ How may I assist you with your destination, ceremonial timeline, or indicative b
 app.post('/api/concierge/extract-lead', async (req, res) => {
   try {
     const { messages } = req.body;
-
     if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: 'Messages array is required.' });
+      return res.status(200).json({ lead: null });
     }
-
-    const conversationTranscript = messages
-      .map((m: { role: string; content: string }) => `${m.role.toUpperCase()}: ${m.content}`)
-      .join('\n');
-
-    const prompt = `
-Analyze the following conversation between a client and The Wedding Dreams AI Concierge.
-Extract all wedding parameters and contact details mentioned by the client. If not mentioned, set to null.
-
-Conversation:
-${conversationTranscript}
-
-Return ONLY a valid JSON object matching this schema:
-{
-  "name": string or null,
-  "phone": string or null,
-  "email": string or null,
-  "weddingDate": string or null,
-  "location": string or null,
-  "guestCount": number or null,
-  "budget": string or null,
-  "intentScore": "high" | "medium" | "low",
-  "summary": string
-}
-`;
-
-    let parsed: any = null;
-    const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
-
-    for (const model of candidateModels) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          config: {
-            responseMimeType: 'application/json',
-          },
-        });
-        if (response.text) {
-          parsed = JSON.parse(response.text.trim());
-          break;
-        }
-      } catch (err: any) {
-        console.warn(`Lead extraction with ${model} failed, trying next fallback:`, err?.message || err);
-      }
-    }
-
-    // Heuristic regex fallback if upstream API is unavailable
-    if (!parsed) {
-      const phoneMatch = conversationTranscript.match(/(?:\+91|0)?[6-9]\d{9}/);
-      const emailMatch = conversationTranscript.match(/[\w.-]+@[\w.-]+\.\w+/);
-      const guestMatch = conversationTranscript.match(/(\d{2,4})\s*(?:guests|people|pax)/i);
-      const budgetMatch = conversationTranscript.match(/(?:₹?\s*\d+(?:[.–]\d+)?\s*(?:lakhs?|lac|cr|crores?))/i);
-      const locationMatch = conversationTranscript.match(/(udaipur|jaipur|goa|delhi|mumbai|kerala)/i);
-
-      parsed = {
-        name: null,
-        phone: phoneMatch ? phoneMatch[0] : null,
-        email: emailMatch ? emailMatch[0] : null,
-        weddingDate: null,
-        location: locationMatch ? locationMatch[0] : null,
-        guestCount: guestMatch ? parseInt(guestMatch[1], 10) : null,
-        budget: budgetMatch ? budgetMatch[0] : null,
-        intentScore: phoneMatch || emailMatch ? 'high' : 'medium',
-        summary: 'Enquiry details identified from conversation context.',
-      };
-    }
-
-    res.json({ lead: parsed });
+    const lead = await extractLeadDossierAsync(messages);
+    res.status(200).json({ lead });
   } catch (error: any) {
-    console.error('Lead extraction error:', error);
-    res.json({
-      lead: {
-        name: null,
-        phone: null,
-        email: null,
-        weddingDate: null,
-        location: null,
-        guestCount: null,
-        budget: null,
-        intentScore: 'medium',
-        summary: 'Enquiry details logged.',
-      },
-    });
+    console.error('Lead extraction endpoint error:', error);
+    res.status(200).json({ lead: null });
   }
 });
 
