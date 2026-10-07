@@ -26,45 +26,55 @@ const ai = new GoogleGenAI({
   },
 });
 
-const CONCIERGE_SYSTEM_INSTRUCTION = `
-You are the Senior AI Wedding Concierge for "The Wedding Dreams", India's premier luxury wedding planning and couture scenography atelier.
+const CONCIERGE_SYSTEM_INSTRUCTION = `You are the bespoke AI Concierge for 'The Wedding Dreams' (a luxury couture & scenography wedding house).
 
-Your Tone & Persona:
-- Refined, gracious, culturally knowledgeable, discerning, and discreet.
-- Embody warm Indian royal hospitality (begin with a subtle "Namaste" when greeting).
-- Speak with understated luxury and elegance; avoid cheesy slang or robotic generic marketing language.
+CRITICAL CONVERSATIONAL RULES:
+1. Mirror the User's Language:
+   - If user writes in Hindi / Hinglish (e.g. 'kya haal hai', 'namaste', 'kaise ho'), reply warmly in fluent, natural Hinglish.
+   - If user writes in English (e.g. 'How are you?', 'Hi', 'What's up'), reply warmly in natural English.
 
-Your Domain Expertise:
-1. Wedding Planning Questions: Traditions and flow for Hindu, interfaith, destination, and modern royal celebrations (Mehendi, Haldi, Sangeet, Vedic Pheras, Grand Reception).
-2. Service Discovery:
-   - Planning & Management (Master directorship, run-of-show, budget governance)
-   - Décor & Design (Architectural florals, 3D scenography, spatial lighting)
-   - Destination Weddings (Palace takeovers, island flotillas, coastal retreats)
-   - Food & Hospitality (Royal banqueting, curated tastings, midnight feasts)
-   - Entertainment (Sufi midnight symphonies, playback vocalists, choreographers)
-   - Photography & Films (35mm editorial film, drone cinematography, heirloom albums)
-3. Destination Guidance:
-   - Udaipur (Lake Pichola, Taj Lake Palace, Jagmandir Island)
-   - Jaipur (Rambagh Palace, Jai Mahal, hilltop fortresses)
-   - Goa (Private cliffside villas, South Goa luxury beachfront resorts)
-   - Delhi NCR (Lutyens estates, Chattarpur farmhouses, Aerocity grand ballrooms)
-4. Budget Guidance:
-   - Explain indicative benchmarks (Venue ~25%, Catering ~20%, Décor ~20%, Photography ~10%, Entertainment ~8%, Hospitality ~7%, Buffer ~10%).
-   - Direct users to the interactive /budget-planner on the website.
-5. Wedding Timeline:
-   - 9–14 months out: Venue locks & room blocks.
-   - 6–8 months out: Creative themes, floral scenography, and artist bookings.
-   - 2–3 months out: Guest RSVPs, fleet logistics, airport concierges.
-6. Guest Planning: Headcount scaling, room allocation, dietary profiling, luxury welcome hampers.
+2. Two-Step Conversational Pivot:
+   - Step 1 (Acknowledge & Respond Warmly): If the user asks a casual, personal, or off-topic question ('how are you', 'tell me a joke', 'who are you', 'weather'), answer them warmly and politely first just like a friendly human (e.g., 'I am doing wonderful, thank you for asking! Hope you're having a lovely day.').
+   - Step 2 (Gentle Atelier Invitation): In the very next line, naturally introduce your role and offer help (e.g., 'Main The Wedding Dreams atelier ka concierge hoon. Chahe aap royal destination wedding plan kar rahe ho, decor themes dekhni ho ya budget estimate karna ho—bataiye main aapki celebration mein kaise madad kar sakta hoon?').
 
-CRITICAL BOUNDARIES & ACCURACY RULES:
-- You must NOT invent prices, specific availability, company policies, fictional client testimonials, false vendor affiliations, or binding guarantees.
-- You must clearly indicate that all figures are indicative benchmarks, never official binding quotations.
-- If specific commercial tariffs, venue dates, or confidential policies are requested, explain gracefully that they depend on custom season, guest count, and artist rider specs, and recommend connecting with our human directorship team.
-- When a user demonstrates strong purchase intent (e.g. asking to book, sharing dates, inquiring about contracts, requesting personalized quotes, or wanting to reserve), you MUST offer:
-  "Would you like to connect with a Wedding Expert?"
-- Help collect or confirm lead details gracefully: Name, Phone, Email, Wedding Date, Location, Guest Count, and Budget.
-`;
+3. Tone & Length:
+   - Keep responses crisp, elegant, and friendly (under 3-4 sentences total).
+   - Never sound robotic or cold. Be welcoming and poised.`;
+
+// Intelligent Offline Rule Engine (Bulletproof Fallback)
+function getIntelligentFallback(message: string): string {
+  const clean = (message || '').toLowerCase().trim();
+
+  // Small-talk 1: "how are you" / "kaise ho" / "kya haal"
+  if (
+    clean.includes('how are you') ||
+    clean.includes('kaise ho') ||
+    clean.includes('kya haal') ||
+    clean.includes('kaise hai') ||
+    clean.includes('how r u') ||
+    clean.includes('how do you do')
+  ) {
+    return "I'm doing wonderful, thank you for asking! Hope your day is going well. As the concierge for The Wedding Dreams, I'm here to assist with everything from palace venues to wedding budgets. How can I help you curate your celebration today?";
+  }
+
+  // Small-talk 2: "hi" / "hello" / "hey" / "namaste"
+  if (
+    clean === 'hi' ||
+    clean === 'hello' ||
+    clean === 'hey' ||
+    clean === 'namaste' ||
+    clean === 'hola' ||
+    clean.startsWith('hi ') ||
+    clean.startsWith('hello ') ||
+    clean.startsWith('hey ') ||
+    clean.startsWith('namaste ')
+  ) {
+    return "Namaste! Welcome to The Wedding Dreams Atelier. Whether you are exploring luxury destinations or curating wedding decor, I'm here to assist. What type of celebration are you dreaming of?";
+  }
+
+  // Any other message during API downtime
+  return "Namaste! I'd be delighted to assist you with your wedding planning details. You can also connect directly with our Creative Directors on WhatsApp or explore our planning tools right here.";
+}
 
 // Helper: Decoupled Asynchronous Lead Extraction
 async function extractLeadDossierAsync(messages: Array<{ role: string; content: string }>) {
@@ -118,29 +128,40 @@ Return ONLY valid JSON matching this schema:
 }
 `;
 
-    const response = await Promise.race([
-      ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: {
-          responseMimeType: 'application/json',
-          abortSignal: controller.signal,
-        },
-      }),
-      new Promise<never>((_, reject) => {
-        controller.signal.addEventListener('abort', () =>
-          reject(new Error('AbortError: Lead extraction timed out'))
-        );
-      }),
-    ]);
+    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+    let parsed: any = null;
+
+    for (const model of candidateModels) {
+      try {
+        const response = await Promise.race([
+          ai.models.generateContent({
+            model,
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            config: {
+              responseMimeType: 'application/json',
+              abortSignal: controller.signal,
+            },
+          }),
+          new Promise<never>((_, reject) => {
+            controller.signal.addEventListener('abort', () =>
+              reject(new Error('AbortError: Lead extraction timed out'))
+            );
+          }),
+        ]);
+
+        if (response && response.text) {
+          parsed = JSON.parse(response.text.trim());
+          break;
+        }
+      } catch (err: any) {
+        // Continue to next candidate
+      }
+    }
 
     clearTimeout(timeoutId);
-    if (response && response.text) {
-      return JSON.parse(response.text.trim());
-    }
+    if (parsed) return parsed;
   } catch (err: any) {
     clearTimeout(timeoutId);
-    // Silent fallback to regex heuristics
   }
 
   return fallbackLead;
@@ -157,18 +178,6 @@ app.post('/api/concierge/chat', async (req, res) => {
       : Array.isArray(messages) && messages.length > 0
         ? messages[messages.length - 1].content || ''
         : '';
-
-    const cleanMsg = (rawMessage || '').trim().toLowerCase();
-    const greetings = ['hi', 'hey', 'hello', 'namaste', 'hola', 'good morning', 'good evening', 'test'];
-
-    // 2. Instant Smart Greeting Bypass (Sub-100ms Response)
-    if (greetings.includes(cleanMsg) || (cleanMsg.length > 0 && cleanMsg.length <= 4)) {
-      return res.status(200).json({
-        reply: "Namaste! Welcome to The Wedding Dreams Atelier. How may I assist you with your destination curation, venue selection, or wedding timeline today?",
-        status: "success",
-        offerExpert: false,
-      });
-    }
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'Messages array is required.' });
@@ -188,55 +197,61 @@ app.post('/api/concierge/chat', async (req, res) => {
 
     let replyText = '';
 
-    // 1. Model Configuration & Timeout Hardening:
-    // Retain gemini-3.8-flash as primary, wrapped with explicit 4-second AbortController signal.
-    // Do NOT attempt infinite retry loops on 503 errors.
+    // Model Configuration & Timeout Hardening:
+    // 6-second timeout with AbortController signal
     const controller = new AbortController();
     const timeoutTimer = setTimeout(() => {
       controller.abort();
-    }, 4000);
+    }, 6000);
 
-    try {
-      const response = await Promise.race([
-        ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents,
-          config: {
-            systemInstruction: contextualInstruction,
-            temperature: 0.7,
-            abortSignal: controller.signal,
-          },
-        }),
-        new Promise<never>((_, reject) => {
-          controller.signal.addEventListener('abort', () =>
-            reject(new Error('AbortError: Request timed out after 4 seconds'))
-          );
-        }),
-      ]);
+    // Try primary gemini-3.8-flash, with seamless gemini-3.1-flash-lite fallback if quota/rate-limited
+    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
 
-      clearTimeout(timeoutTimer);
-      if (response && response.text) {
-        replyText = response.text.trim();
+    for (const model of candidateModels) {
+      if (replyText) break;
+      try {
+        const response = await Promise.race([
+          ai.models.generateContent({
+            model,
+            contents,
+            config: {
+              systemInstruction: contextualInstruction,
+              temperature: 0.7,
+              maxOutputTokens: 300,
+              abortSignal: controller.signal,
+            },
+          }),
+          new Promise<never>((_, reject) => {
+            controller.signal.addEventListener('abort', () =>
+              reject(new Error('AbortError: Request timed out after 6 seconds'))
+            );
+          }),
+        ]);
+
+        if (response && response.text) {
+          replyText = response.text.trim();
+          break;
+        }
+      } catch (modelErr: any) {
+        console.warn(`Model ${model} request error:`, modelErr?.message?.slice(0, 120) || modelErr);
       }
-    } catch (modelErr: any) {
-      clearTimeout(timeoutTimer);
-      console.warn('gemini-3.8-flash request error or timeout:', modelErr?.message || modelErr);
     }
 
-    // 4. Instant Client-Safe Fallback:
-    // If gemini-3.8-flash returns a 503, 429, or AbortError:
-    // Catch immediately and return HTTP 200 with an atelier fallback response
+    clearTimeout(timeoutTimer);
+
+    // Intelligent Offline Rule Engine (Bulletproof Fallback):
+    // If Gemini API throws 503, rate limit (429), or timeout, use contextual fallback dictionary
     if (!replyText) {
-      replyText = "Namaste. Our curatorial concierge desk is currently prioritizing active wedding consultations. Please connect directly with our Directors via the WhatsApp Atelier desk below, or tap 'Connect with Expert'.";
+      replyText = getIntelligentFallback(rawMessage);
     }
 
     const lowerText = replyText.toLowerCase();
     const hasIntentOffer = lowerText.includes('connect with a wedding expert') ||
                            lowerText.includes('talk to a wedding expert') ||
-                           lowerText.includes('connect with expert');
+                           lowerText.includes('connect with expert') ||
+                           lowerText.includes('creative directors');
 
-    // 3. Decouple Lead Extraction (Do Not Block Chat Flow):
-    // Send user reply immediately
+    // Decouple Lead Extraction: Send user reply immediately
     res.status(200).json({
       reply: replyText,
       status: "success",
@@ -249,9 +264,15 @@ app.post('/api/concierge/chat', async (req, res) => {
     );
   } catch (error: any) {
     console.error('Concierge Chat general error:', error);
-    // Instant Client-Safe Fallback - Never throw unhandled 500
+    const rawMessage = typeof req.body?.message === 'string'
+      ? req.body.message
+      : Array.isArray(req.body?.messages) && req.body.messages.length > 0
+        ? req.body.messages[req.body.messages.length - 1].content || ''
+        : '';
+
+    // Always return HTTP 200 with intelligent fallback response so UI never breaks
     res.status(200).json({
-      reply: "Namaste. Our curatorial concierge desk is currently prioritizing active wedding consultations. Please connect directly with our Directors via the WhatsApp Atelier desk below, or tap 'Connect with Expert'.",
+      reply: getIntelligentFallback(rawMessage),
       status: "success",
       offerExpert: true,
     });

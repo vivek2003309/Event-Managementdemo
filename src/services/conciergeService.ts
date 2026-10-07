@@ -117,7 +117,9 @@ export class ConciergeService {
     }));
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+
+    const lastMsg = history[history.length - 1]?.content?.toLowerCase() || '';
 
     try {
       const response = await fetch('/api/concierge/chat', {
@@ -141,14 +143,22 @@ export class ConciergeService {
 
       const data = await response.json();
       return {
-        reply: data.reply || "Namaste. How may I assist you with your destination wedding curation today?",
+        reply: data.reply || "Namaste! Welcome to The Wedding Dreams Atelier. How may I assist you with your destination curation, venue selection, or wedding timeline today?",
         offerExpert: Boolean(data.offerExpert),
       };
     } catch (error: any) {
       clearTimeout(timeoutId);
       console.warn('ConciergeService.sendMessage fallback:', error?.message || error);
+
+      let fallbackReply = "Namaste! I'd be delighted to assist you with your wedding planning details. You can also connect directly with our Creative Directors on WhatsApp or explore our planning tools right here.";
+      if (lastMsg.includes('how are you') || lastMsg.includes('kaise ho') || lastMsg.includes('kya haal')) {
+        fallbackReply = "I'm doing wonderful, thank you for asking! Hope your day is going well. As the concierge for The Wedding Dreams, I'm here to assist with everything from palace venues to wedding budgets. How can I help you curate your celebration today?";
+      } else if (lastMsg.includes('hi') || lastMsg.includes('hello') || lastMsg.includes('hey') || lastMsg.includes('namaste')) {
+        fallbackReply = "Namaste! Welcome to The Wedding Dreams Atelier. Whether you are exploring luxury destinations or curating wedding decor, I'm here to assist. What type of celebration are you dreaming of?";
+      }
+
       return {
-        reply: "Namaste. Our curatorial concierge desk is currently prioritizing active wedding consultations. Please connect directly with our Directors via the WhatsApp Atelier desk below, or tap 'Connect with Expert'.",
+        reply: fallbackReply,
         offerExpert: true,
       };
     }
