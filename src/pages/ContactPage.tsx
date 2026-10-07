@@ -264,6 +264,77 @@ export const ContactPage: React.FC = () => {
                     />
                   </div>
 
+                  {/* Target Wedding Year & Availability Selector */}
+                  <div className="bg-[#FAF8F5] p-5 rounded-[6px] border border-[#EAE5DC] space-y-4">
+                    <div>
+                      <label className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#77736D] block mb-2">
+                        Target Wedding Year &amp; Planning Timeline *
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        {[
+                          { year: '2026', badge: 'Active Commissions', subtitle: 'Premier 2026 Season' },
+                          { year: '2025', badge: 'Final Quota', subtitle: 'Autumn / Winter 2025' },
+                          { year: '2024', badge: 'Archival Inception', subtitle: '2024 & Earlier' },
+                          { year: '2027', badge: 'Advance Booking', subtitle: '2027 Palace Reserves' },
+                        ].map((item) => {
+                          const isSelected =
+                            (formData.dates && formData.dates.startsWith(item.year)) ||
+                            (!formData.dates && item.year === '2026');
+                          return (
+                            <button
+                              key={item.year}
+                              type="button"
+                              onClick={() => {
+                                const currentMonthDay =
+                                  formData.dates && formData.dates.length >= 10
+                                    ? formData.dates.slice(4)
+                                    : '-11-20';
+                                const newDate = `${item.year}${currentMonthDay}`;
+                                setFormData((prev) => ({ ...prev, dates: newDate }));
+                              }}
+                              className={`p-3 rounded-[6px] border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                isSelected
+                                  ? 'border-[#C6A66B] bg-[#FDFBF7] ring-1 ring-[#C6A66B]/50 shadow-xs'
+                                  : 'border-[#EAE5DC] bg-white hover:border-[#D6CEBE]'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between w-full mb-1">
+                                <span className="font-serif text-[18px] text-[#171717] font-semibold">
+                                  {item.year}
+                                </span>
+                                <span
+                                  className={`text-[9px] uppercase px-1.5 py-0.5 rounded font-medium ${
+                                    isSelected
+                                      ? 'bg-[#C6A66B]/20 text-[#8C6D37]'
+                                      : 'bg-[#FAF8F5] text-[#8C827A]'
+                                  }`}
+                                >
+                                  {item.badge}
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-[#55524E] leading-tight">
+                                {item.subtitle}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#77736D] block mb-1.5">
+                        Specific Target Date / Preferred Period
+                      </label>
+                      <input
+                        type="date"
+                        min={new Date().toISOString().split('T')[0]}
+                        value={formData.dates || '2026-11-20'}
+                        onChange={(e) => setFormData({ ...formData, dates: e.target.value })}
+                        className="w-full bg-white text-[#252525] text-[14px] py-2.5 px-3.5 rounded-[4px] border border-[#EAE5DC] focus:outline-none focus:border-[#C6A66B] focus:ring-1 focus:ring-[#C6A66B]/50"
+                      />
+                    </div>
+                  </div>
+
                   <Textarea
                     label="Celebration Vision & Specific Ceremonies"
                     placeholder="Describe your desired dates, acoustic preferences, or family traditions..."

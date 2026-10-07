@@ -14,7 +14,7 @@ export const WEDDINGS_DATA: Wedding[] = [
     functionsCount: 5,
     weddingStyle: 'Royal Heritage Scenography',
     season: 'Winter',
-    year: 2024,
+    year: 2026,
     format: 'full-wedding',
     excerpt:
       'A 3-day royal synthesis featuring 12,000 hand-threaded marigold garlands, private vintage boat processions, and a regal floating dinner beneath fireworks.',
@@ -62,7 +62,7 @@ export const WEDDINGS_DATA: Wedding[] = [
     functionsCount: 4,
     weddingStyle: 'Barefoot Coastal Luxury',
     season: 'Spring',
-    year: 2024,
+    year: 2025,
     format: 'destination-enclave',
     excerpt:
       'Sunset vows overlooking Cabo Serai, featuring bespoke sea-salt mixology, an all-linen sundowner, and acoustic Portuguese fado melodies by the ocean.',
@@ -109,7 +109,7 @@ export const WEDDINGS_DATA: Wedding[] = [
     functionsCount: 6,
     weddingStyle: 'Imperial Rajputana & Mirror Glamour',
     season: 'Autumn / Winter',
-    year: 2024,
+    year: 2026,
     format: 'reception-sangeet',
     excerpt:
       'A grand celebration at Rambagh Palace with 60 live percussionists, royal horse guards, and a 40-foot illuminated mirror ceiling for the formal banquet.',
@@ -156,7 +156,7 @@ export const WEDDINGS_DATA: Wedding[] = [
     functionsCount: 3,
     weddingStyle: 'Monochromatic Modern Minimalist',
     season: 'Spring',
-    year: 2024,
+    year: 2025,
     format: 'intimate-heritage',
     excerpt:
       'Clean lines, organic foliage, monochromatic raw stone backdrops, and an intimate farm-to-table culinary dinner prepared live by celebrity guest chefs.',

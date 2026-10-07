@@ -185,7 +185,7 @@ export const Footer: React.FC = () => {
         <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-[#F8F5EF]/60 tracking-wider">
           <div className="text-center md:text-left flex flex-col sm:flex-row sm:items-center gap-3">
             <span>
-              Copyright &copy; 2025 The Wedding Dreams. All Rights Reserved.
+              Copyright &copy; 2026 The Wedding Dreams. All Rights Reserved.
             </span>
           </div>
           <div className="relative z-20 flex flex-wrap items-center justify-center md:justify-end gap-x-4 gap-y-2 text-[11px] text-[#F8F5EF]/70 px-4 sm:px-12 md:px-28">

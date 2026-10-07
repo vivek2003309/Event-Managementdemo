@@ -301,6 +301,59 @@ export const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, on
             </select>
           </div>
 
+          {/* Target Wedding Year & Availability Selector */}
+          <div>
+            <label className="block text-[10px] tracking-[0.2em] uppercase text-[#8C827A] font-semibold mb-2">
+              Target Wedding Year &amp; Planning Timeline *
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { year: '2026', badge: 'Active Commissions', subtitle: 'Premier 2026 Season' },
+                { year: '2025', badge: 'Final Quota', subtitle: 'Autumn / Winter 2025' },
+                { year: '2024', badge: 'Archival Inception', subtitle: '2024 & Earlier' },
+                { year: '2027', badge: 'Advance Booking', subtitle: '2027 Palace Reserves' },
+              ].map((item) => {
+                const isSelected =
+                  (formData.eventDate && formData.eventDate.startsWith(item.year)) ||
+                  (!formData.eventDate && item.year === '2026');
+                return (
+                  <button
+                    key={item.year}
+                    type="button"
+                    onClick={() => {
+                      const currentMonthDay =
+                        formData.eventDate && formData.eventDate.length >= 10
+                          ? formData.eventDate.slice(4)
+                          : '-11-20';
+                      const newDate = `${item.year}${currentMonthDay}`;
+                      setFormData((prev) => ({ ...prev, eventDate: newDate }));
+                      if (errors.eventDate) setErrors((prev) => ({ ...prev, eventDate: '' }));
+                    }}
+                    className={`p-2.5 rounded-[4px] border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      isSelected
+                        ? 'border-[#C5A059] bg-[#C5A059]/10 ring-1 ring-[#C5A059]/50 shadow-xs'
+                        : 'border-[#E5DFD3] bg-[#F5F2EB] hover:border-[#C5A059]/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="font-serif text-[16px] text-[#1A1A1A] font-semibold">
+                        {item.year}
+                      </span>
+                      <span
+                        className={`text-[8px] uppercase px-1.5 py-0.5 rounded font-medium ${
+                          isSelected ? 'bg-[#C5A059] text-white' : 'bg-white/80 text-[#8C827A]'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-[#77736D] leading-tight">{item.subtitle}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Row 3: Destination & Celebration Date Selector */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

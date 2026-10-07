@@ -26,10 +26,12 @@ export const OurWorkPage: React.FC<{ onOpenLetTalk: () => void }> = ({ onOpenLet
   const [eventTypeFilter, setEventTypeFilter] = useState<string>('All');
   const [destinationFilter, setDestinationFilter] = useState<string>('All');
   const [styleFilter, setStyleFilter] = useState<string>('All');
+  const [yearFilter, setYearFilter] = useState<string>('All');
 
   // Filter options
   const eventTypeOptions = ['All', 'Weddings', 'Destination', 'Sangeet', 'Reception', 'Engagement'];
   const destinationOptions = ['All', 'Udaipur', 'Jaipur', 'Goa', 'Delhi NCR'];
+  const yearOptions = ['All', '2026', '2025', '2024'];
   const styleOptions = [
     'All',
     'Royal Heritage',
@@ -42,6 +44,13 @@ export const OurWorkPage: React.FC<{ onOpenLetTalk: () => void }> = ({ onOpenLet
   // Filtered dataset
   const filteredWeddings = useMemo(() => {
     return WEDDINGS_DATA.filter((w) => {
+      // Year filter check
+      if (yearFilter !== 'All') {
+        if (w.year.toString() !== yearFilter) {
+          return false;
+        }
+      }
+
       // Event type check
       if (eventTypeFilter !== 'All') {
         const matchesEvent =
@@ -72,15 +81,16 @@ export const OurWorkPage: React.FC<{ onOpenLetTalk: () => void }> = ({ onOpenLet
 
       return true;
     });
-  }, [eventTypeFilter, destinationFilter, styleFilter]);
+  }, [eventTypeFilter, destinationFilter, styleFilter, yearFilter]);
 
   const hasActiveFilters =
-    eventTypeFilter !== 'All' || destinationFilter !== 'All' || styleFilter !== 'All';
+    eventTypeFilter !== 'All' || destinationFilter !== 'All' || styleFilter !== 'All' || yearFilter !== 'All';
 
   const resetFilters = () => {
     setEventTypeFilter('All');
     setDestinationFilter('All');
     setStyleFilter('All');
+    setYearFilter('All');
   };
 
   return (
@@ -185,6 +195,30 @@ export const OurWorkPage: React.FC<{ onOpenLetTalk: () => void }> = ({ onOpenLet
                         }`}
                       >
                         {dest}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <span className="text-[#EAE5DC] hidden md:inline">|</span>
+
+                {/* Wedding Year Filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#77736D]">
+                    Year:
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {yearOptions.map((yr) => (
+                      <button
+                        key={yr}
+                        onClick={() => setYearFilter(yr)}
+                        className={`px-2.5 py-1 rounded-[3px] text-[11px] uppercase tracking-wider transition-colors cursor-pointer ${
+                          yearFilter === yr
+                            ? 'bg-[#171717] text-white font-medium shadow-xs'
+                            : 'bg-transparent text-[#77736D] hover:text-[#171717]'
+                        }`}
+                      >
+                        {yr}
                       </button>
                     ))}
                   </div>

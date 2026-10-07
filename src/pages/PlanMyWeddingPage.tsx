@@ -833,9 +833,53 @@ export const PlanMyWeddingPage: React.FC<{ onOpenLetTalk?: () => void }> = ({ on
                 </div>
 
                 <div className="bg-[#FAF8F5] p-6 rounded-[8px] border border-[#EAE5DC] space-y-5">
+                  {/* Target Wedding Year & Availability Selector */}
                   <div>
                     <label className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#77736D] block mb-2">
-                      Target Wedding Date
+                      Target Wedding Year &amp; Planning Timeline *
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {[
+                        { year: '2026', badge: 'Active Commissions', subtitle: 'Premier 2026 Season' },
+                        { year: '2025', badge: 'Final Quota', subtitle: 'Autumn / Winter 2025' },
+                        { year: '2024', badge: 'Archival Inception', subtitle: '2024 & Earlier' },
+                        { year: '2027', badge: 'Advance Booking', subtitle: '2027 Palace Reserves' },
+                      ].map((item) => {
+                        const isSelected = (draft.weddingDate && draft.weddingDate.startsWith(item.year)) || (!draft.weddingDate && item.year === '2026');
+                        return (
+                          <button
+                            key={item.year}
+                            type="button"
+                            onClick={() => {
+                              const currentMonthDay = draft.weddingDate && draft.weddingDate.length >= 10 ? draft.weddingDate.slice(4) : '-11-20';
+                              const newDate = `${item.year}${currentMonthDay}`;
+                              setDraft((prev) => ({ ...prev, weddingDate: newDate }));
+                              if (errors.weddingDate) setErrors((prev) => ({ ...prev, weddingDate: '' }));
+                            }}
+                            className={`p-3 rounded-[6px] border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'border-[#C6A66B] bg-[#FDFBF7] ring-1 ring-[#C6A66B]/50 shadow-xs'
+                                : 'border-[#EAE5DC] bg-white hover:border-[#D6CEBE]'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full mb-1">
+                              <span className="font-serif text-[18px] text-[#171717] font-semibold">{item.year}</span>
+                              <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded font-medium ${
+                                isSelected ? 'bg-[#C6A66B]/20 text-[#8C6D37]' : 'bg-[#FAF8F5] text-[#8C827A]'
+                              }`}>
+                                {item.badge}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-[#55524E] leading-tight">{item.subtitle}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#77736D] block mb-2">
+                      Primary Target Wedding Date
                     </label>
                     <div className="relative">
                       <input
